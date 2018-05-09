@@ -2136,5 +2136,23 @@
         <file>
             <name>$PROJ_DIR$\src\stm32f10x_it.h</name>
         </file>
+        <file>
+            <name>$PROJ_DIR$\src\time_utils.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\time_utils.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\usart_utils.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\usart_utils.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\utils.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\utils.h</name>
+        </file>
     </group>
 </project>

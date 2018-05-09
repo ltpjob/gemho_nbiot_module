@@ -3,6 +3,10 @@
 #include "stm32f10x.h"
 #include <string.h>
 #include "gemho_cmd.h"
+#include "utils.h"
+#include "time_utils.h"
+#include "usart_utils.h"
+
 
 static uint8_t l_uartBuf[1024] = "";
 static char l_sendBuf[2048] = "";
@@ -14,57 +18,6 @@ typedef enum ModeToRun_tag{
   lucTrans,
 }ModeToRun; 
 
-static volatile uint64_t l_timestamp = 0;
-
-static void *memmem(const void *l, size_t l_len, const void *s, size_t s_len)  
-{  
-    register char *cur, *last;  
-    const char *cl = (const char *)l;  
-    const char *cs = (const char *)s;  
-   
-    /* we need something to compare */  
-    if (l_len == 0 || s_len == 0)  
-        return NULL;  
-   
-    /* "s" must be smaller or equal to "l" */  
-    if (l_len < s_len)  
-        return NULL;  
-   
-    /* special case where s_len == 1 */  
-    if (s_len == 1)  
-        return memchr(l, (int)*cs, l_len);  
-   
-    /* the last position where its possible to find "s" in "l" */  
-    last = (char *)cl + l_len - s_len;  
-   
-    for (cur = (char *)cl; cur <= last; cur++)  
-        if (cur[0] == cs[0] && memcmp(cur, cs, s_len) == 0)  
-            return cur;  
-   
-    return NULL;  
-}  
-
-//获取时间戳，单位ms
-uint64_t get_timestamp()
-{
-  return l_timestamp;
-}
-
-//systick初始化
-void tick_ms_init()
-{
-  if (SysTick_Config(SystemCoreClock / 1000))
-  {
-    /* Capture error */ 
-    while (1);
-  }
-}
-
-//systick中断
-void SysTick_Handler(void)
-{
-  l_timestamp++;
-}
 
 //时钟设置
 void RCC_Configuration(void)
@@ -127,64 +80,7 @@ void usart3_direct_usart1()
   }
 }
 
-//int atSend(uint8_t *data, uint32_t len, int timeout)
-//{
-//  uint64_t uLastRcvTime = 0;
-//  uint64_t uSendFinTime = 0;
-//  int status = 0;
-//  
-//  memset(l_uartBuf, 0, sizeof(l_uartBuf));
-//  l_cnt = 0;
-//  
-//  for(int i=0; i<len; i++)
-//  {
-//    USART_SendData(USART1, data[i]);
-//    while(USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET){}
-//  }
-//  
-//  uSendFinTime = get_timestamp();
-//  
-//  while(1)
-//  {
-//    if(get_timestamp() - uSendFinTime>=timeout)
-//    {
-//      status = -2;
-//      break;
-//    }
-//    
-//    if(USART_GetFlagStatus(USART3, USART_FLAG_RXNE) != RESET)
-//    {
-//      uLastRcvTime = get_timestamp();
-//      l_uartBuf[l_cnt++] = USART_ReceiveData(USART3);
-//    }
-//    
-//    if(l_cnt > 0 && get_timestamp()-uLastRcvTime > 100)
-//    {
-//      if(memmem(l_uartBuf, l_cnt, ATDEBUG, strlen(ATDEBUG)) != NULL)
-//      {
-//        mode = atDebug;
-//        memset(l_uartBuf, 0, sizeof(l_uartBuf));
-//        l_cnt = 0;
-//        break;
-//      }
-//      else if(memmem(l_uartBuf, l_cnt, GEMHOCFG, strlen(GEMHOCFG)) != NULL)
-//      {
-//        mode = gemhoConfig;
-//        memset(l_uartBuf, 0, sizeof(l_uartBuf));
-//        l_cnt = 0;
-//        break;
-//      }
-//      else
-//      {
-//        mode = lucTrans;
-//        coap_msgSend(l_uartBuf, l_cnt);
-//        memset(l_uartBuf, 0, sizeof(l_uartBuf));
-//        l_cnt = 0;
-//        break;
-//      }
-//    }
-//  }
-//}
+
 
 int coap_msgSend(uint8_t *data, uint32_t len)
 {
@@ -207,11 +103,7 @@ int coap_msgSend(uint8_t *data, uint32_t len)
   
 //  printf(l_sendBuf);
   
-  for(int i=0; i<strlen(l_sendBuf); i++)
-  {
-    USART_SendData(USART1, l_sendBuf[i]);
-    while(USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET){}
-  }
+  usart_write(USART1, l_sendBuf, strlen(l_sendBuf));
   
   return 0;
 }
@@ -238,28 +130,14 @@ ModeToRun start_mode()
       if(memmem(l_uartBuf, l_cnt, ATDEBUG, strlen(ATDEBUG)) != NULL)
       {
         mode = atDebug;
-        memset(l_uartBuf, 0, sizeof(l_uartBuf));
-        l_cnt = 0;
-        
-        for(int i=0; i<strlen(ATDEBUG); i++)
-        {
-          USART_SendData(USART3, ATDEBUG[i]);
-          while(USART_GetFlagStatus(USART3, USART_FLAG_TXE) == RESET){}
-        }
+        usart_write(USART3, ATDEBUG, strlen(ATDEBUG));
         
         break;
       }
       else if(memmem(l_uartBuf, l_cnt, GEMHOCFG, strlen(GEMHOCFG)) != NULL)
       {
         mode = gemhoConfig;
-        memset(l_uartBuf, 0, sizeof(l_uartBuf));
-        l_cnt = 0;
-        
-        for(int i=0; i<strlen(GEMHOCFG); i++)
-        {
-          USART_SendData(USART3, GEMHOCFG[i]);
-          while(USART_GetFlagStatus(USART3, USART_FLAG_TXE) == RESET){}
-        }
+        usart_write(USART3, GEMHOCFG, strlen(GEMHOCFG));
         
         break;
       }
@@ -267,8 +145,6 @@ ModeToRun start_mode()
       {
         mode = lucTrans;
         coap_msgSend(l_uartBuf, l_cnt);
-        memset(l_uartBuf, 0, sizeof(l_uartBuf));
-        l_cnt = 0;
         break;
       }
     }
@@ -315,21 +191,17 @@ int main(void)
   }
   else if(mode == lucTrans)
   {
-    uint64_t uLastRcvTime = 0;
+    int ret = 0;
+    
     memset(l_uartBuf, 0, sizeof(l_uartBuf));
     l_cnt = 0;
     
     while(1)
     {
-      if(USART_GetFlagStatus(USART3, USART_FLAG_RXNE) != RESET)
+      ret = usart_read(USART3, l_uartBuf, sizeof(l_uartBuf), 100);
+      if(ret > 0)
       {
-        uLastRcvTime = get_timestamp();
-        l_uartBuf[l_cnt++] = USART_ReceiveData(USART3);
-      }
-      
-      if((l_cnt > 0 && get_timestamp()-uLastRcvTime > 100) || l_cnt >= sizeof(l_uartBuf))
-      {
-        coap_msgSend(l_uartBuf, l_cnt);
+        coap_msgSend(l_uartBuf, ret);
         memset(l_uartBuf, 0, sizeof(l_uartBuf));
         l_cnt = 0;
         
@@ -341,3 +213,10 @@ int main(void)
   }
  
 }
+
+
+
+
+
+
+
