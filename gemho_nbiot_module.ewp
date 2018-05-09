@@ -355,7 +355,7 @@
                 </option>
                 <option>
                     <name>CCOptLevel</name>
-                    <state>1</state>
+                    <state>0</state>
                 </option>
                 <option>
                     <name>CCOptStrategy</name>
@@ -364,7 +364,7 @@
                 </option>
                 <option>
                     <name>CCOptLevelSlave</name>
-                    <state>1</state>
+                    <state>0</state>
                 </option>
                 <option>
                     <name>CompilerMisraRules98</name>
@@ -2121,6 +2121,9 @@
     </group>
     <group>
         <name>User</name>
+        <file>
+            <name>$PROJ_DIR$\src\gemho_cmd.h</name>
+        </file>
         <file>
             <name>$PROJ_DIR$\src\main.c</name>
         </file>
