@@ -2,7 +2,7 @@
 #include "time_utils.h"
 
 
-size_t usart_write(USART_TypeDef* USARTx, const void *d, size_t len)
+int usart_write(USART_TypeDef* USARTx, const void *d, size_t len)
 {
   const uint8_t *data = d;
   
@@ -15,7 +15,7 @@ size_t usart_write(USART_TypeDef* USARTx, const void *d, size_t len)
   return len;
 }
 
-size_t usart_read(USART_TypeDef* USARTx, void *d, size_t len, int timeout)
+int usart_read(USART_TypeDef* USARTx, void *d, size_t len, int timeout)
 {
   size_t cnt = 0;
   uint8_t *data = d;

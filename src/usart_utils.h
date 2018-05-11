@@ -10,9 +10,9 @@
 
    
  
-size_t usart_write(USART_TypeDef* USARTx, const void *d, size_t len);
+int usart_write(USART_TypeDef* USARTx, const void *d, size_t len);
 
-size_t usart_read(USART_TypeDef* USARTx, void *d, size_t len, int timeout);
+int usart_read(USART_TypeDef* USARTx, void *d, size_t len, int timeout);
    
    
    

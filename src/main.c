@@ -12,11 +12,118 @@ static uint8_t l_uartBuf[1024] = "";
 static char l_sendBuf[2048] = "";
 static uint32_t l_cnt = 0;
 
-typedef enum ModeToRun_tag{
-  atDebug = 0,
-  gemhoConfig,
-  lucTrans,
-}ModeToRun; 
+static nbModu_config nbModuConfig = 
+{
+  .ip = {180, 101, 147, 115},
+  .port = 5683,
+  .sendMode = 0,
+};
+
+int ATIPPORT_cmd(char *cmd, int len)
+{
+  char buf[128] = "";
+  
+  memcpy(buf, cmd, len);
+  
+  if(strcmp(buf, ATIPPORT) == 0)
+  {
+    snprintf(buf, sizeof(buf), "+IPPORT:%d.%d.%d.%d,%d\r\n", 
+             nbModuConfig.ip[0], nbModuConfig.ip[1], nbModuConfig.ip[2], 
+             nbModuConfig.ip[3], nbModuConfig.port);
+    usart_write(USART3, buf, strlen(buf));
+  }
+  else if(memcmp(buf, ATIPPORTEQ, strlen(ATIPPORTEQ)) == 0)
+  {
+    int ip[4];
+    int port;
+    
+    if(checkConfigIPORT(buf+strlen(ATIPPORTEQ), ip, &port) == 0)
+    {
+      for(int i=0; i<sizeof(nbModuConfig.ip)/sizeof(nbModuConfig.ip[0]); i++)
+      {
+        nbModuConfig.ip[i] = ip[i];
+      }
+      
+      nbModuConfig.port = port;
+      
+      usart_write(USART3, OKSTR, strlen(OKSTR));
+    }
+    else
+    {
+      usart_write(USART3, ERROR, strlen(ERROR));
+    }
+  }
+  else
+  {
+    usart_write(USART3, ERROR, strlen(ERROR));
+  }
+  
+  return 0;
+}
+
+int ATSEMO_cmd(char *cmd, int len)
+{
+  char buf[128] = "";
+  
+  memcpy(buf, cmd, len);
+  
+  if(strcmp(buf, ATSEMO) == 0)
+  {
+    snprintf(buf, sizeof(buf), "+SEMO:%d\r\n", 
+             nbModuConfig.sendMode);
+    usart_write(USART3, buf, strlen(buf));
+  }
+  else if(memcmp(buf, ATSEMOEQ, strlen(ATSEMOEQ)) == 0)
+  {
+    int sendMode = -1;
+
+    if(sscanf(buf+strlen(ATSEMOEQ), "%d", &sendMode) == 1)
+    {
+      if(sendMode <0 || sendMode>1)
+      {
+        usart_write(USART3, ERROR, strlen(ERROR));
+      }
+      else
+      {
+        nbModuConfig.sendMode = sendMode;
+        usart_write(USART3, OKSTR, strlen(OKSTR));
+      }
+    }
+    else
+    {
+      usart_write(USART3, ERROR, strlen(ERROR));
+    }
+  }
+  else
+  {
+    usart_write(USART3, ERROR, strlen(ERROR));
+  }
+  
+  return 0;
+}
+
+int ATSAVE_cmd(char *cmd, int len)
+{
+  
+  return 0;
+}
+
+int ATDELO_cmd(char *cmd, int len)
+{
+  
+  return 0;
+}
+
+cmdExcute cmdExe[] = 
+{
+  {ATIPPORT, ATIPPORT_cmd},
+  {ATSEMO, ATSEMO_cmd},
+  {ATSAVE, ATSAVE_cmd},
+  {ATDELO, ATDELO_cmd},
+};
+
+
+
 
 
 //Ê±ÖÓÉèÖÃ
@@ -79,7 +186,6 @@ void usart3_direct_usart1()
     }
   }
 }
-
 
 
 int coap_msgSend(uint8_t *data, uint32_t len)
@@ -154,6 +260,64 @@ ModeToRun start_mode()
   return mode;
 }
 
+
+void ghConfig()
+{
+  int ret = 0;
+  uint8_t *pStart = NULL;
+  uint8_t *pEnd = NULL;
+  
+  memset(l_uartBuf, 0, sizeof(l_uartBuf));
+  l_cnt = 0;
+  
+  while(1)
+  {
+    ret = usart_read(USART3, l_uartBuf+l_cnt, sizeof(l_uartBuf)-l_cnt, 10);
+    l_cnt += ret;
+    
+    if(l_cnt == 0)
+      continue;
+      
+    pEnd = memmem(l_uartBuf, l_cnt, ENDFLAG, strlen(ENDFLAG));
+    if(pEnd != NULL)
+    {
+      for(int i=0; i<sizeof(cmdExe)/sizeof(cmdExe[0]); i++)
+      {
+        pStart = memmem(l_uartBuf, l_cnt, cmdExe[i].cmd, strlen(cmdExe[i].cmd));
+        if(pStart == l_uartBuf)
+        {
+          cmdExe[i].ce_fun((char *)pStart, pEnd - pStart);
+          break;
+        }
+        else if(sizeof(cmdExe)/sizeof(cmdExe[0]) <= i+1) //Î´¶¨ÒåÃüÁî
+        {
+          usart_write(USART3, UDCMD, strlen(UDCMD));
+        }
+      }
+      
+      memset(l_uartBuf, 0, sizeof(l_uartBuf));
+      l_cnt = 0;
+      //Çå³ý´®¿Ú»º³å
+      if(USART_GetFlagStatus(USART3, USART_FLAG_RXNE) != RESET)
+        USART_ReceiveData(USART3);
+    }
+    
+    if(l_cnt >= sizeof(l_uartBuf))
+    {
+      memset(l_uartBuf, 0, sizeof(l_uartBuf));
+      l_cnt = 0;
+      usart_write(USART3, ERROR, strlen(ERROR));
+      //Çå³ý´®¿Ú»º³å
+      if(USART_GetFlagStatus(USART3, USART_FLAG_RXNE) != RESET)
+        USART_ReceiveData(USART3);
+    }
+    
+  }
+  
+  
+}
+
+
 int main(void)
 {
   SystemInit();
@@ -187,30 +351,29 @@ int main(void)
   }
   else if(mode == gemhoConfig)
   {
-    usart3_direct_usart1();
+    ghConfig();
   }
-  else if(mode == lucTrans)
+
+  
+  int ret;
+  memset(l_uartBuf, 0, sizeof(l_uartBuf));
+  l_cnt = 0;
+  
+  while(mode == lucTrans)
   {
-    int ret = 0;
-    
-    memset(l_uartBuf, 0, sizeof(l_uartBuf));
-    l_cnt = 0;
-    
-    while(1)
+    ret = usart_read(USART3, l_uartBuf, sizeof(l_uartBuf), 100);
+    if(ret > 0)
     {
-      ret = usart_read(USART3, l_uartBuf, sizeof(l_uartBuf), 100);
-      if(ret > 0)
-      {
-        coap_msgSend(l_uartBuf, ret);
-        memset(l_uartBuf, 0, sizeof(l_uartBuf));
-        l_cnt = 0;
-        
-        //Çå³ý´®¿Ú»º³å
-        if(USART_GetFlagStatus(USART3, USART_FLAG_RXNE) != RESET)
-          USART_ReceiveData(USART3);
-      }
+      coap_msgSend(l_uartBuf, ret);
+      memset(l_uartBuf, 0, sizeof(l_uartBuf));
+      l_cnt = 0;
+      
+      //Çå³ý´®¿Ú»º³å
+      if(USART_GetFlagStatus(USART3, USART_FLAG_RXNE) != RESET)
+        USART_ReceiveData(USART3);
     }
   }
+  
  
 }
 
