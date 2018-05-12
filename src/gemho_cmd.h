@@ -47,6 +47,12 @@ typedef struct tag_cmdExcute
 #define OKSTR "OK\r\n"
 #define ERROR "ERROR\r\n"
 #define ENDFLAG "\r\n"
+#define AT "AT\r\n"
+#define IMEIGET "AT+CGSN=1\r\n"
+#define IMEIRTN "+CGSN:"
+#define NBANDGET "AT+NBAND?\r\n"
+#define NBANDRTN "+NBAND:"
+#define ENDOK "\r\n\r\nOK"
 
 #define ATIPPORT "AT+IPPORT" //…Ë÷√ip∫Õport   
 #define ATIPPORTEQ "AT+IPPORT=" 
