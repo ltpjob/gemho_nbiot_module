@@ -2403,10 +2403,28 @@
     <group>
         <name>User</name>
         <file>
-            <name>$PROJ_DIR$\src\gemho_cmd.h</name>
+            <name>$PROJ_DIR$\src\config_utils.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\config_utils.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\crc32.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\crc32.h</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\gemho_nbiot_module.h</name>
         </file>
         <file>
             <name>$PROJ_DIR$\src\main.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\SEE_i2c.c</name>
+        </file>
+        <file>
+            <name>$PROJ_DIR$\src\SEE_i2c.h</name>
         </file>
         <file>
             <name>$PROJ_DIR$\src\stm32f10x_conf.h</name>

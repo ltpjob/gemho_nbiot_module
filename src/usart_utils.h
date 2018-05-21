@@ -8,7 +8,9 @@
 #include <stdio.h>
 #include "stm32f10x.h"
 
-   
+
+int usart_init(USART_TypeDef* USARTx, uint32_t USART_BaudRate, 
+               uint8_t stopbig, uint8_t parity);
  
 int usart_write(USART_TypeDef* USARTx, const void *d, size_t len);
 

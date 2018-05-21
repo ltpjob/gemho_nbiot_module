@@ -57,3 +57,44 @@ int checkConfigIPORT(char *pIPort, int *pOutIp, int *pOutPort)
   return checkFlag;
 }
 
+int checkConfigRS232(char *pIPort, uint32_t *pOutBaudrate, uint8_t *pOutStopBit, uint8_t *pOutParity)
+{
+  int checkFlag = 0;
+  uint32_t baudrate;
+  uint32_t stopbit;
+  uint32_t parity;
+  
+  if (sscanf(pIPort, "%d,%d,%d", &baudrate, &stopbit, &parity) == 3)
+  { 
+    *pOutBaudrate = baudrate;
+    *pOutStopBit = stopbit;
+    *pOutParity = parity;
+
+    if(*pOutBaudrate != 4800 &&
+       *pOutBaudrate != 9600 &&
+         *pOutBaudrate != 57600 &&
+           *pOutBaudrate != 115200)
+    {
+      checkFlag = -1;
+    }
+    
+    if(*pOutStopBit != 1 &&
+       *pOutStopBit != 2)
+    {
+      checkFlag = -1;
+    }
+    
+    if(*pOutParity != 0 &&
+       *pOutParity != 1 &&
+         *pOutParity != 2)
+    {
+      checkFlag = -1;
+    }
+
+  }
+  else
+    checkFlag = -1;
+  
+  return checkFlag;
+}
+
