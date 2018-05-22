@@ -9,7 +9,7 @@ void config_init()
   SEE_i2c_init();
 }
 
-int save_config(nbModu_config *pConfig)
+int save_config(const nbModu_config *pConfig)
 {
   int ret = 0;
   confSaveUnit cfgUnit;

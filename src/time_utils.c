@@ -40,6 +40,17 @@ void delay_ms(uint64_t time_ms)
 }
 
 
+void loop_ms(uint64_t time)
+{    
+   u16 i=0;  
+   while(time--)
+   {
+      i=8000;  //自己定义
+      while(i--) ;    
+   }
+}
+
+
 /**
  * 初始化独立看门狗
  * prer:分频数:0~7(只有低 3 位有效!)

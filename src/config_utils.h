@@ -9,7 +9,7 @@ extern "C" {
   
 void config_init();
 
-int save_config(nbModu_config *pConfig);
+int save_config(const nbModu_config *pConfig);
 
 int read_config(nbModu_config *pConfig);
 

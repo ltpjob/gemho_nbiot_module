@@ -20,6 +20,9 @@ void SysTick_Handler(void);
 //延时函数（单位ms）
 void delay_ms(uint64_t time_ms);
 
+//延时函数（单位ms）
+void loop_ms(uint64_t time);
+
 
 /**
  * 初始化独立看门狗
