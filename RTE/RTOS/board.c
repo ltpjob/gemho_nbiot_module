@@ -13,6 +13,7 @@
  */
 #include <rthw.h>
 #include <rtthread.h>
+#include "usart.h"
 
 #define _SCB_BASE       (0xE000E010UL)
 #define _SYSTICK_CTRL   (*(rt_uint32_t *)(_SCB_BASE + 0x0))
@@ -82,6 +83,11 @@ void rt_hw_board_init()
 #if defined(RT_USING_USER_MAIN) && defined(RT_USING_HEAP)
     rt_system_heap_init(rt_heap_begin_get(), rt_heap_end_get());
 #endif
+
+#if defined(RT_USING_SERIAL)
+//	rt_hw_usart_init();
+#endif
+
 }
 
 void SysTick_Handler(void)
