@@ -469,7 +469,7 @@ int udp_msgSend(uint8_t *data, uint32_t len)
 ModeToRun start_mode()
 {
   ModeToRun mode = lucTrans;
-  uint8_t buf[256] = "";
+  uint8_t buf[512] = "";
   int len = 0;
   
   do
