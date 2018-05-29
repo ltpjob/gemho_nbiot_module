@@ -1,7 +1,8 @@
 #ifndef _SEE_I2C_H_
 #define _SEE_I2C_H_
 
-#include "stm32f10x_conf.h"
+#include <stdio.h>
+#include <stdint.h>
 
 #define I2C_SPEED 200000
 #define sEE_I2C I2C1

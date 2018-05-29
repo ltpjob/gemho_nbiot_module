@@ -1,6 +1,5 @@
 #include "utils.h"
 #include <stdio.h>
-#include "stm32f10x_conf.h"
 #include "stm32f10x.h"
 #include <string.h>
 
