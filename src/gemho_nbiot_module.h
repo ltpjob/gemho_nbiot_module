@@ -45,8 +45,8 @@ typedef struct tag_cmdExcute
 }cmdExcute;
 
 
-#define USERCOM USART3
-#define BC95COM USART1
+//#define USERCOM USART3
+//#define BC95COM USART1
 #define UCOMBAUDRATE 115200
 #define BC95ORGBAUDRATE 9600
 

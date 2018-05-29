@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include "stm32f10x_conf.h"
 #include "stm32f10x.h"
 #include <string.h>
 #include "gemho_nbiot_module.h"
@@ -13,6 +12,9 @@
 static uint8_t l_uartBuf[1024] = "";
 static char l_sendBuf[2048] = "";
 static uint32_t l_cnt = 0;
+
+static void *USERCOM = NULL;
+static void *BC95COM = NULL;
 
 static const nbModu_config l_default_nbMCFG = 
 {
@@ -380,23 +382,22 @@ void USERCOM_direct_BC95COM()
 {
   while(1)
   {
-    uint16_t data;
+    char buf[64]="";
+		int ret = 0;
     
     IWDG_Feed();
     
-    if(USART_GetFlagStatus(BC95COM, USART_FLAG_RXNE) != RESET)
-    {
-      data = USART_ReceiveData(BC95COM);
-      USART_SendData(USERCOM,data);
-      while(USART_GetFlagStatus(USERCOM, USART_FLAG_TXE) == RESET){}
-    }
-    
-    if(USART_GetFlagStatus(USERCOM, USART_FLAG_RXNE) != RESET)
-    {
-      data = USART_ReceiveData(USERCOM);
-      USART_SendData(BC95COM,data);
-      while(USART_GetFlagStatus(BC95COM, USART_FLAG_TXE) == RESET){}
-    }
+		ret = usart_read(USERCOM, buf, sizeof(buf), 0);
+		if(ret > 0)
+		{
+			usart_write(BC95COM, buf, ret);
+		}
+		
+		ret = usart_read(BC95COM, buf, sizeof(buf), 0);
+		if(ret > 0)
+		{
+			usart_write(USERCOM, buf, ret);
+		}
   }
 }
 
@@ -467,50 +468,33 @@ int udp_msgSend(uint8_t *data, uint32_t len)
 //开机模式选择
 ModeToRun start_mode()
 {
-  uint64_t uLastRcvTime = 0;
   ModeToRun mode = lucTrans;
+  uint8_t buf[256] = "";
+  int len = 0;
   
-  memset(l_uartBuf, 0, sizeof(l_uartBuf));
-  l_cnt = 0;
+  do
+  {
+    len = usart_read(USERCOM, buf, sizeof(buf), 100);
+  }while(len == 0);
   
-  while(1)
-  { 
-    IWDG_Feed();
-    if(USART_GetFlagStatus(USERCOM, USART_FLAG_RXNE) != RESET)
-    {
-      uLastRcvTime = get_timestamp();
-      l_uartBuf[l_cnt++] = USART_ReceiveData(USERCOM);
-    }
+  if(memmem(buf, len, ATDEBUG, strlen(ATDEBUG)) != NULL)
+  {
+    mode = atDebug;
+    usart_write(USERCOM, ATDEBUG, strlen(ATDEBUG));
+  }
+  else if(memmem(buf, len, GEMHOCFG, strlen(GEMHOCFG)) != NULL)
+  {
+    mode = gemhoConfig;
+    usart_write(USERCOM, GEMHOCFG, strlen(GEMHOCFG));
+  }
+  else
+  {
+    mode = lucTrans;
     
-    if((l_cnt > 0 && get_timestamp()-uLastRcvTime > 100) || l_cnt >= sizeof(l_uartBuf))
-    {
-      if(memmem(l_uartBuf, l_cnt, ATDEBUG, strlen(ATDEBUG)) != NULL)
-      {
-        mode = atDebug;
-        usart_write(USERCOM, ATDEBUG, strlen(ATDEBUG));
-        
-        break;
-      }
-      else if(memmem(l_uartBuf, l_cnt, GEMHOCFG, strlen(GEMHOCFG)) != NULL)
-      {
-        mode = gemhoConfig;
-        usart_write(USERCOM, GEMHOCFG, strlen(GEMHOCFG));
-        
-        break;
-      }
-      else
-      {
-        mode = lucTrans;
-        
-        if(l_nbModuConfig.sendMode == 0)
-          coap_msgSend(l_uartBuf, l_cnt);
-        else
-          udp_msgSend(l_uartBuf, l_cnt);
-        
-        break;
-      }
-    }
-    
+    if(l_nbModuConfig.sendMode == 0)
+      coap_msgSend(buf, len);
+    else
+      udp_msgSend(buf, len);
   }
   
   return mode;
@@ -554,9 +538,6 @@ void ghConfig()
       
       memset(l_uartBuf, 0, sizeof(l_uartBuf));
       l_cnt = 0;
-      //清除串口缓冲
-      if(USART_GetFlagStatus(USERCOM, USART_FLAG_RXNE) != RESET)
-        USART_ReceiveData(USERCOM);
     }
     
     if(l_cnt >= sizeof(l_uartBuf))
@@ -564,9 +545,6 @@ void ghConfig()
       memset(l_uartBuf, 0, sizeof(l_uartBuf));
       l_cnt = 0;
       usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
-      //清除串口缓冲
-      if(USART_GetFlagStatus(USERCOM, USART_FLAG_RXNE) != RESET)
-        USART_ReceiveData(USERCOM);
     }
     
   }
@@ -685,7 +663,7 @@ int bc95_cfgBaudRate(uint32_t old_br, uint32_t new_br)
   char buf[128] = "";
   int ret = 0;
   
-  usart_init(BC95COM, old_br, 1, 0);
+  usart_configure(BC95COM, old_br, 1, 0);
   
   snprintf(buf, sizeof(buf), "AT+NATSPEED=%d,3,0,2,1\r\n", new_br);
   if(ATCMD_waitOK(buf, 60, 30) != 0)
@@ -694,7 +672,7 @@ int bc95_cfgBaudRate(uint32_t old_br, uint32_t new_br)
   }
   else
   {
-    usart_init(BC95COM, new_br, 1, 0);
+    usart_configure(BC95COM, new_br, 1, 0);
     if(ATCMD_waitOK(ATSTR, 3, 30) != 0)
     {
       ret = -1;
@@ -761,9 +739,23 @@ int config_bc95()
 
 void main_entry(void *args)
 {
+//	rt_device_t dev = rt_device_find("uart3");
+//	rt_device_open(dev, RT_DEVICE_FLAG_RDWR | RT_DEVICE_FLAG_INT_RX |
+//                          RT_DEVICE_FLAG_INT_TX |   RT_DEVICE_FLAG_DMA_RX);
+//	
+//	while(1)
+//	{
+//		char buf[512] = "12312321332123\r\n";
+//		int ret = 0;
+//		ret = rt_device_write(dev, 0, buf, sizeof(buf));
+//		if(ret != sizeof(buf))
+//			ret = 1;
+//		rt_device_read(dev, 0, buf, sizeof(buf));
+//	}
+	
   RCC_Configuration();
   GPIO_Configuration();
-  NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);
+  NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
   tick_ms_init();
   RST_Configuration();
   config_init();
@@ -783,8 +775,8 @@ void main_entry(void *args)
   
   load_config();
   
-  usart_init(BC95COM, BC95ORGBAUDRATE, 1, 0);
-  usart_init(USERCOM, l_nbModuConfig.baudrate, l_nbModuConfig.stopbit, l_nbModuConfig.parity);
+  BC95COM = usart_init("uart1", BC95ORGBAUDRATE, 1, 0);
+  USERCOM = usart_init("uart3", l_nbModuConfig.baudrate, l_nbModuConfig.stopbit, l_nbModuConfig.parity);
   
   config_bc95();
   
@@ -817,17 +809,13 @@ void main_entry(void *args)
         
       memset(l_uartBuf, 0, sizeof(l_uartBuf));
       l_cnt = 0;
-      
-      //清除串口缓冲
-      if(USART_GetFlagStatus(USERCOM, USART_FLAG_RXNE) != RESET)
-        USART_ReceiveData(USERCOM);
     }
   }
 }
 
 int main(void)
 {
-	rt_thread_t thread = rt_thread_create("devt", main_entry, RT_NULL, 512, 1, 10);
+	rt_thread_t thread = rt_thread_create("devt", main_entry, RT_NULL, 1024, 1, 10);
 	if (thread!= RT_NULL)
 		rt_thread_startup(thread);
 	
