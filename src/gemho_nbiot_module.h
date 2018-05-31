@@ -7,6 +7,8 @@
 
 #include <stdint.h>   
 
+	 
+#define COAP_MAXLEN (490)
    
 #pragma pack(1)
 
@@ -51,7 +53,7 @@ typedef struct tag_cmdExcute
 #define BC95ORGBAUDRATE 9600
 
 
-#define COAP_MAXLEN (490)
+
 #define ATDEBUG "MODE+ATDEBUG\r\n"
 #define GEMHOCFG "MODE+GEMHOCFG\r\n"
 #define OKSTR "OK\r\n"

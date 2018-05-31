@@ -1,6 +1,10 @@
 #ifndef _SEE_I2C_H_
 #define _SEE_I2C_H_
 
+#ifdef __cplusplus
+ extern "C" {
+#endif 
+
 #include <stdio.h>
 #include <stdint.h>
 
@@ -21,6 +25,11 @@ uint32_t sEE_WaitEepromStandbyState(void);
 uint32_t SEE_i2c_write(uint8_t wData, uint16_t WriteAddr);
 
 uint32_t SEE_i2c_read(uint8_t* rData, uint16_t ReadAddr);
+
+
+#ifdef __cplusplus
+ }
+#endif
 
 
 #endif

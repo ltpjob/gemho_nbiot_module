@@ -7,14 +7,18 @@
 #include "usart_utils.h"
 #include "config_utils.h"
 #include <rtthread.h>
+#include "msg_fifo.h"
 
 
-static uint8_t l_uartBuf[1024] = "";
+//static uint8_t l_uartBuf[1024] = "";
 static char l_sendBuf[2048] = "";
-static uint32_t l_cnt = 0;
+//static uint32_t l_cnt = 0;
+
 
 static void *USERCOM = NULL;
 static void *BC95COM = NULL;
+static void *l_hMsgFifo = NULL;
+static rt_sem_t sem_urx = RT_NULL;
 
 static const nbModu_config l_default_nbMCFG = 
 {
@@ -256,7 +260,7 @@ static int ATDELO_cmd(char *cmd, int len)
 }
 
 
-cmdExcute cmdExe[] = 
+static cmdExcute cmdExe[] = 
 {
   {ATRS232, ATRS232_cmd},
   {ATIPPORT, ATIPPORT_cmd},
@@ -269,7 +273,7 @@ cmdExcute cmdExe[] =
 
 
 //时钟设置
-void RCC_Configuration(void)
+static void RCC_Configuration(void)
 {
   /* Enable GPIO clock */
   RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOB | RCC_APB2Periph_USART1 | RCC_APB2Periph_AFIO, ENABLE);
@@ -279,7 +283,7 @@ void RCC_Configuration(void)
 }
 
 //io设置
-void GPIO_Configuration(void)
+static void GPIO_Configuration(void)
 {
   GPIO_InitTypeDef GPIO_InitStructure;
   
@@ -331,30 +335,7 @@ void GPIO_Configuration(void)
   
 }
 
-void RST_Configuration(void)
-{
-  NVIC_InitTypeDef NVIC_InitStructure;
-  EXTI_InitTypeDef EXTI_InitStructure;
-  
-  GPIO_EXTILineConfig(GPIO_PortSourceGPIOB, GPIO_PinSource13);
-
-  /* Configure EXTI0 line */
-  EXTI_InitStructure.EXTI_Line = EXTI_Line13;
-  EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
-  EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Falling;  
-  EXTI_InitStructure.EXTI_LineCmd = ENABLE;
-  EXTI_Init(&EXTI_InitStructure);
-
-  /* Enable and set EXTI0 Interrupt to the lowest priority */
-  NVIC_InitStructure.NVIC_IRQChannel = EXTI15_10_IRQn;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 3;
-  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
-  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-  NVIC_Init(&NVIC_InitStructure);
-}
-
-
-void HOSTWAKE_Configuration(void)
+static void RST_Configuration(void)
 {
   NVIC_InitTypeDef NVIC_InitStructure;
   EXTI_InitTypeDef EXTI_InitStructure;
@@ -378,7 +359,7 @@ void HOSTWAKE_Configuration(void)
 
 
 //BC95COM直连USERCOM
-void USERCOM_direct_BC95COM()
+static void USERCOM_direct_BC95COM()
 {
   while(1)
   {
@@ -403,7 +384,7 @@ void USERCOM_direct_BC95COM()
 
 
 //coap发送
-int coap_msgSend(uint8_t *data, uint32_t len)
+static int coap_msgSend(uint8_t *data, uint32_t len)
 {
   uint32_t count = 0;
   
@@ -431,7 +412,7 @@ int coap_msgSend(uint8_t *data, uint32_t len)
 
 
 //udp发送
-int udp_msgSend(uint8_t *data, uint32_t len)
+static int udp_msgSend(uint8_t *data, uint32_t len)
 {
   uint32_t count = 0;
   
@@ -466,7 +447,7 @@ int udp_msgSend(uint8_t *data, uint32_t len)
 }
 
 //开机模式选择
-ModeToRun start_mode()
+static ModeToRun start_mode()
 {
   ModeToRun mode = lucTrans;
   uint8_t buf[512] = "";
@@ -491,41 +472,42 @@ ModeToRun start_mode()
   {
     mode = lucTrans;
     
-    if(l_nbModuConfig.sendMode == 0)
-      coap_msgSend(buf, len);
-    else
-      udp_msgSend(buf, len);
+//    if(l_nbModuConfig.sendMode == 0)
+//      coap_msgSend(buf, len);
+//    else
+//      udp_msgSend(buf, len);
+		msg_push(l_hMsgFifo, buf, len);
   }
   
   return mode;
 }
 
-//gh更能配置
+//gh配置
 void ghConfig()
 {
   int ret = 0;
   uint8_t *pStart = NULL;
   uint8_t *pEnd = NULL;
+  uint8_t buf[128] = "";
+  int len = 0;
   
-  memset(l_uartBuf, 0, sizeof(l_uartBuf));
-  l_cnt = 0;
   
   while(1)
   {
     IWDG_Feed();
-    ret = usart_read(USERCOM, l_uartBuf+l_cnt, sizeof(l_uartBuf)-l_cnt, 10);
-    l_cnt += ret;
+    ret = usart_read(USERCOM, buf+len, sizeof(buf)-len, 10);
+    len += ret;
     
-    if(l_cnt == 0)
+    if(len == 0)
       continue;
       
-    pEnd = memmem(l_uartBuf, l_cnt, ENDFLAG, strlen(ENDFLAG));
+    pEnd = memmem(buf, len, ENDFLAG, strlen(ENDFLAG));
     if(pEnd != NULL)
     {
       for(int i=0; i<sizeof(cmdExe)/sizeof(cmdExe[0]); i++)
       {
-        pStart = memmem(l_uartBuf, l_cnt, cmdExe[i].cmd, strlen(cmdExe[i].cmd));
-        if(pStart == l_uartBuf)
+        pStart = memmem(buf, len, cmdExe[i].cmd, strlen(cmdExe[i].cmd));
+        if(pStart == buf)
         {
           cmdExe[i].ce_fun((char *)pStart, pEnd - pStart);
           break;
@@ -536,22 +518,21 @@ void ghConfig()
         }
       }
       
-      memset(l_uartBuf, 0, sizeof(l_uartBuf));
-      l_cnt = 0;
+      memset(buf, 0, sizeof(buf));
+      len = 0;
     }
     
-    if(l_cnt >= sizeof(l_uartBuf))
+    if(len >= sizeof(buf))
     {
-      memset(l_uartBuf, 0, sizeof(l_uartBuf));
-      l_cnt = 0;
+      memset(buf, 0, sizeof(buf));
+      len = 0;
       usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
     }
     
   }
-  
 }
 
-int wait_OK(int timeout)
+static int wait_OK(int timeout)
 {
   int ret = 0;
   char buf[128] = "";
@@ -570,7 +551,7 @@ int wait_OK(int timeout)
   return ret;
 }
 
-int ATCMD_waitOK(char *cmd, int loopTime, int timeout)
+static int ATCMD_waitOK(char *cmd, int loopTime, int timeout)
 {
   int status = 0;
   
@@ -589,7 +570,7 @@ int ATCMD_waitOK(char *cmd, int loopTime, int timeout)
 }
 
 //获取IMEI码
-int get_IMEI(char *pIMEI)
+static int get_IMEI(char *pIMEI)
 {
   int ret = 0;
   uint8_t *pStart = NULL;
@@ -615,7 +596,7 @@ int get_IMEI(char *pIMEI)
 }
 
 //获取NBAND码
-int get_NBAND(int *pNand)
+static int get_NBAND(int *pNand)
 {
   int ret = 0;
   uint8_t *pStart = NULL;
@@ -642,7 +623,7 @@ int get_NBAND(int *pNand)
 
 
 //初始载入配置
-int load_config()
+static int load_config()
 {
   int ret = 0;
   
@@ -658,7 +639,7 @@ int load_config()
 
 
 
-int bc95_cfgBaudRate(uint32_t old_br, uint32_t new_br)
+static int bc95_cfgBaudRate(uint32_t old_br, uint32_t new_br)
 {
   char buf[128] = "";
   int ret = 0;
@@ -685,10 +666,15 @@ int bc95_cfgBaudRate(uint32_t old_br, uint32_t new_br)
 
 
 //初始配置
-int config_bc95()
+static int config_bc95()
 {
   int status = 0;
   char buf[128] = "";
+	
+	//reset bc95
+  GPIO_ResetBits(GPIOA, GPIO_Pin_11);
+  delay_ms(110);
+  GPIO_SetBits(GPIOA, GPIO_Pin_11);
   
   status = ATCMD_waitOK(ATSTR, 60, 100);
   
@@ -737,22 +723,40 @@ int config_bc95()
 }
 
 
-void main_entry(void *args)
+static void thread_msgSend(void *args)
 {
-//	rt_device_t dev = rt_device_find("uart3");
-//	rt_device_open(dev, RT_DEVICE_FLAG_RDWR | RT_DEVICE_FLAG_INT_RX |
-//                          RT_DEVICE_FLAG_INT_TX |   RT_DEVICE_FLAG_DMA_RX);
-//	
-//	while(1)
-//	{
-//		char buf[512] = "12312321332123\r\n";
-//		int ret = 0;
-//		ret = rt_device_write(dev, 0, buf, sizeof(buf));
-//		if(ret != sizeof(buf))
-//			ret = 1;
-//		rt_device_read(dev, 0, buf, sizeof(buf));
-//	}
+	while(1)
+	{
+		char msgData[512] = "";
+		uint16_t msgSize = 0;
+		int ret = 0;
+		ret = msg_pop(l_hMsgFifo, &msgData, &msgSize, 30);
+		if(ret == 0)
+		{
+			if(msgSize > 0)
+			{
+				usart_write(USERCOM, msgData, msgSize);
+			}
+		}
+		else if(ret == -RT_ETIMEOUT)
+		{
+			
+		}
+		
+	}
+}
+
+static rt_err_t urx_input(rt_device_t dev, rt_size_t size)
+{
 	
+	rt_sem_release(sem_urx);
+	
+	return RT_EOK;
+} 
+
+
+static void main_entry(void *args)
+{
   RCC_Configuration();
   GPIO_Configuration();
   NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
@@ -761,11 +765,6 @@ void main_entry(void *args)
   config_init();
   
   IWDG_Init(5, 0xfff);
-  
-  //reset bc95
-  GPIO_ResetBits(GPIOA, GPIO_Pin_11);
-  delay_ms(110);
-  GPIO_SetBits(GPIOA, GPIO_Pin_11);
   
   //led light off
   GPIO_SetBits(GPIOB, GPIO_Pin_14);
@@ -779,8 +778,11 @@ void main_entry(void *args)
   USERCOM = usart_init("uart3", l_nbModuConfig.baudrate, l_nbModuConfig.stopbit, l_nbModuConfig.parity);
   
   config_bc95();
+	
+	l_hMsgFifo = msg_init(COAP_MAXLEN, 5);
   
   ModeToRun mode = start_mode();
+	
   
   if(mode == atDebug)
   {
@@ -791,31 +793,53 @@ void main_entry(void *args)
     ghConfig();
   }
 
+	rt_thread_t ht_msgSend = rt_thread_create("thread_msgSend", thread_msgSend, RT_NULL, 1024, 3, 10);
+	if (ht_msgSend!= RT_NULL)
+		rt_thread_startup(ht_msgSend);
+	
+	sem_urx = rt_sem_create("sem_urx", 0, RT_IPC_FLAG_PRIO);
+	rt_device_set_rx_indicate(USERCOM, urx_input);
+	
+	while(1)
+	{
+		if(rt_sem_take(sem_urx, 200) == RT_EOK)
+		{
+			int len;
+			char buf[512] = "";
+			int waitCount = 0;
+			
+			len = usart_read(USERCOM, buf, sizeof(buf), 50);
+			if(len > 0)
+			{
+				msg_push(l_hMsgFifo, buf, len);
+			}
+		}
+	}
   
-  int ret;
-  memset(l_uartBuf, 0, sizeof(l_uartBuf));
-  l_cnt = 0;
-  
-  while(mode == lucTrans)
-  {
-    IWDG_Feed();
-    ret = usart_read(USERCOM, l_uartBuf, sizeof(l_uartBuf), 100);
-    if(ret > 0)
-    {
-      if(l_nbModuConfig.sendMode == 0)
-        coap_msgSend(l_uartBuf, ret);
-      else
-        udp_msgSend(l_uartBuf, ret);
-        
-      memset(l_uartBuf, 0, sizeof(l_uartBuf));
-      l_cnt = 0;
-    }
-  }
+//  int ret;
+//  memset(l_uartBuf, 0, sizeof(l_uartBuf));
+//  l_cnt = 0;
+//  
+//  while(mode == lucTrans)
+//  {
+//    IWDG_Feed();
+//    ret = usart_read(USERCOM, l_uartBuf, sizeof(l_uartBuf), 100);
+//    if(ret > 0)
+//    {
+//      if(l_nbModuConfig.sendMode == 0)
+//        coap_msgSend(l_uartBuf, ret);
+//      else
+//        udp_msgSend(l_uartBuf, ret);
+//        
+//      memset(l_uartBuf, 0, sizeof(l_uartBuf));
+//      l_cnt = 0;
+//    }
+//  }
 }
 
 int main(void)
 {
-	rt_thread_t thread = rt_thread_create("devt", main_entry, RT_NULL, 1024, 1, 10);
+	rt_thread_t thread = rt_thread_create("main_entry", main_entry, RT_NULL, 2048, 2, 10);
 	if (thread!= RT_NULL)
 		rt_thread_startup(thread);
 	
