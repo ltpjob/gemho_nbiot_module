@@ -118,7 +118,9 @@ int32_t msg_push(void *h, void *msgData, uint16_t msgSize)
 	rt_size_t size = 0;
 	
 	if(msgSize > handle->msgSize)
-		return -1;
+	{
+		msgSize = handle->msgSize;
+	}
 	
 	if(rt_data_queue_pop(&handle->push_queue, (const void **)&mu, &size, RT_WAITING_NO) == RT_EOK)
 	{

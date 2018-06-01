@@ -806,35 +806,14 @@ static void main_entry(void *args)
 		{
 			int len;
 			char buf[512] = "";
-			int waitCount = 0;
 			
-			len = usart_read(USERCOM, buf, sizeof(buf), 50);
+			len = usart_read(USERCOM, buf, sizeof(buf), 100);
 			if(len > 0)
 			{
 				msg_push(l_hMsgFifo, buf, len);
 			}
 		}
 	}
-  
-//  int ret;
-//  memset(l_uartBuf, 0, sizeof(l_uartBuf));
-//  l_cnt = 0;
-//  
-//  while(mode == lucTrans)
-//  {
-//    IWDG_Feed();
-//    ret = usart_read(USERCOM, l_uartBuf, sizeof(l_uartBuf), 100);
-//    if(ret > 0)
-//    {
-//      if(l_nbModuConfig.sendMode == 0)
-//        coap_msgSend(l_uartBuf, ret);
-//      else
-//        udp_msgSend(l_uartBuf, ret);
-//        
-//      memset(l_uartBuf, 0, sizeof(l_uartBuf));
-//      l_cnt = 0;
-//    }
-//  }
 }
 
 int main(void)

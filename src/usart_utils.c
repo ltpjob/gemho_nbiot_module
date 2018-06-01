@@ -123,6 +123,8 @@ int usart_read(void* USARTx, void *d, size_t len, int timeout)
 			uLastRcvTime = get_timestamp();
 			cnt+=ret;
 		}
+		else if(timeout != 0)
+			rt_thread_delay(1);
     
     if((timeout != -1 && get_timestamp()-uLastRcvTime >= timeout) || cnt >= len)
       break;
