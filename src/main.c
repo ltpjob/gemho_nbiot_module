@@ -11,7 +11,7 @@
 
 
 //static uint8_t l_uartBuf[1024] = "";
-static char l_sendBuf[2048] = "";
+//static char l_sendBuf[2048] = "";
 //static uint32_t l_cnt = 0;
 
 
@@ -19,6 +19,7 @@ static void *USERCOM = NULL;
 static void *BC95COM = NULL;
 static void *l_hMsgFifo = NULL;
 static rt_sem_t sem_urx = RT_NULL;
+static DeviceStatus l_devStatus = DEVICEOK;
 
 static const nbModu_config l_default_nbMCFG = 
 {
@@ -382,68 +383,134 @@ static void USERCOM_direct_BC95COM()
   }
 }
 
+static int wait_OK_timeout(int timeout)
+{
+  int ret = 0;
+  char buf[128] = "";
+	int cnt = 0;
+	int len = 0;
+	uint64_t LastTime = get_timestamp();
+	
+	while(get_timestamp() - LastTime <= timeout)
+	{
+		if(cnt > sizeof(buf))
+			cnt = sizeof(buf);
+		
+		len = usart_read(BC95COM, buf+cnt, sizeof(buf)+cnt, 20);
+		if(len > 0)
+		{
+			cnt += len;
+		}
+  
+		if(memmem(buf, sizeof(buf), OKSTR, strlen(OKSTR)) != NULL)
+		{
+			ret = 0;
+			break;
+		}
+		else
+		{
+			ret = -1;
+		}
+	}
+
+  return ret;
+}
+
+static int wait_OK(int timeout)
+{
+  int ret = 0;
+  char buf[128] = "";
+  
+  usart_read(BC95COM, buf, sizeof(buf), timeout);
+  
+  if(memmem(buf, sizeof(buf), OKSTR, strlen(OKSTR)) != NULL)
+  {
+    ret = 0;
+  }
+  else
+  {
+    ret = -1;
+  }
+
+  return ret;
+}
+
 
 //coap发送
-static int coap_msgSend(uint8_t *data, uint32_t len)
+static int coap_msgSend(uint8_t *data, uint32_t len, uint32_t repeats)
 {
-  uint32_t count = 0;
+  char buf[128] = "";
+	uint32_t count = 0;
+	int ret = -1;
   
-  if(len >COAP_MAXLEN)
+  if(len > COAP_MAXLEN)
     len = COAP_MAXLEN;
   
-  if(len == 0 || sizeof(l_sendBuf) < len*2+30)
-    return 0;
-  
-  
-  memset(l_sendBuf, 0, sizeof(l_sendBuf));
-  count = snprintf(l_sendBuf, sizeof(l_sendBuf), "AT+NMGS=%d,00%04X", len+3, len);
-  for(int i=0; i<len; i++)
-  {
-    count += snprintf(l_sendBuf+count, sizeof(l_sendBuf)-count, "%02X", data[i]);
-  }
-  count += snprintf(l_sendBuf+count, sizeof(l_sendBuf)-count, "\r\n");
-  
-//  printf(l_sendBuf);
-  
-  usart_write(BC95COM, l_sendBuf, strlen(l_sendBuf));
-  
-  return 0;
+	for(int i=0; i<repeats; i++)
+	{
+		count = snprintf(buf, sizeof(buf), "AT+NMGS=%d,00%04X", len+3, len);
+		usart_write(BC95COM, buf, count);
+
+		for(int i=0; i<len; i++)
+		{
+			count = snprintf(buf, sizeof(buf), "%02X", data[i]);
+			usart_write(BC95COM, buf, count);
+		}
+		count = snprintf(buf, sizeof(buf), "\r\n");
+		usart_write(BC95COM, buf, count);
+		
+		if(wait_OK_timeout(2000) == 0)
+		{
+			ret = 0;
+			break;
+		}
+	}
+
+  return ret;
 }
 
 
 //udp发送
-static int udp_msgSend(uint8_t *data, uint32_t len)
+static int udp_msgSend(uint8_t *data, uint32_t len, uint32_t repeats)
 {
-  uint32_t count = 0;
+  char buf[128] = "";
+	uint32_t count = 0;
+	int ret = -1;
   
-  if(len >COAP_MAXLEN)
+  if(len > COAP_MAXLEN)
     len = COAP_MAXLEN;
+	
+	for(int i=0; i<repeats; i++)
+	{
   
-  if(len == 0 || sizeof(l_sendBuf) < len*2+30)
-    return 0;
+		count = snprintf(buf, sizeof(buf), 
+										 "AT+NSOST=0,%d.%d.%d.%d,%d,%d,", 
+										 l_nbModuConfig.ip[0], l_nbModuConfig.ip[1], l_nbModuConfig.ip[2], 
+										 l_nbModuConfig.ip[3], l_nbModuConfig.port, len+sizeof(l_IMEI));
+		usart_write(BC95COM, buf, count);
+		
+		for(int i=0; i<sizeof(l_IMEI); i++)
+		{
+			count = snprintf(buf, sizeof(buf), "%02X", l_IMEI[i]);
+			usart_write(BC95COM, buf, count);
+		}
+		
+		for(int i=0; i<len; i++)
+		{
+			count = snprintf(buf, sizeof(buf), "%02X", data[i]);
+			usart_write(BC95COM, buf, count);
+		}
+		count = snprintf(buf, sizeof(buf), "\r\n");
+		usart_write(BC95COM, buf, count);
+		
+		if(wait_OK_timeout(2000) == 0)
+		{
+			ret = 0;
+			break;
+		}
+	}
   
-  memset(l_sendBuf, 0, sizeof(l_sendBuf));
-  count = snprintf(l_sendBuf, sizeof(l_sendBuf), 
-                   "AT+NSOST=0,%d.%d.%d.%d,%d,%d,", 
-                   l_nbModuConfig.ip[0], l_nbModuConfig.ip[1], l_nbModuConfig.ip[2], 
-                   l_nbModuConfig.ip[3], l_nbModuConfig.port, len+sizeof(l_IMEI));
-  
-  for(int i=0; i<sizeof(l_IMEI); i++)
-  {
-    count += snprintf(l_sendBuf+count, sizeof(l_sendBuf)-count, "%02X", l_IMEI[i]);
-  }
-  
-  for(int i=0; i<len; i++)
-  {
-    count += snprintf(l_sendBuf+count, sizeof(l_sendBuf)-count, "%02X", data[i]);
-  }
-  count += snprintf(l_sendBuf+count, sizeof(l_sendBuf)-count, "\r\n");
-  
-//  printf(l_sendBuf);
-  
-  usart_write(BC95COM, l_sendBuf, strlen(l_sendBuf));
-  
-  return 0;
+  return ret;
 }
 
 //开机模式选择
@@ -471,11 +538,6 @@ static ModeToRun start_mode()
   else
   {
     mode = lucTrans;
-    
-//    if(l_nbModuConfig.sendMode == 0)
-//      coap_msgSend(buf, len);
-//    else
-//      udp_msgSend(buf, len);
 		msg_push(l_hMsgFifo, buf, len);
   }
   
@@ -532,25 +594,6 @@ void ghConfig()
   }
 }
 
-static int wait_OK(int timeout)
-{
-  int ret = 0;
-  char buf[128] = "";
-  
-  usart_read(BC95COM, buf, sizeof(buf), timeout);
-  
-  if(memmem(buf, sizeof(buf), OKSTR, strlen(OKSTR)) != NULL)
-  {
-    ret = 0;
-  }
-  else
-  {
-    ret = -1;
-  }
-
-  return ret;
-}
-
 static int ATCMD_waitOK(char *cmd, int loopTime, int timeout)
 {
   int status = 0;
@@ -576,21 +619,25 @@ static int get_IMEI(char *pIMEI)
   uint8_t *pStart = NULL;
   uint8_t *pEnd = NULL;
   static char buf[128] = "";
-  
-  usart_write(BC95COM, IMEIGET, strlen(IMEIGET));
-  
-  ret = -1;
-  if(usart_read(BC95COM, buf, sizeof(buf), 100) > 0)
-  {
-    pStart = memmem(buf, sizeof(buf), IMEIRTN, strlen(IMEIRTN));
-    pEnd = memmem(buf, sizeof(buf), ENDOK, strlen(ENDOK));
-    
-    if(pStart != NULL && pEnd != NULL && pEnd-pStart-strlen(IMEIRTN)==15)
-    {
-      memcpy(pIMEI, pStart+strlen(IMEIRTN), 15);
-      ret = 0;
-    }
-  }
+	
+	ret = -1;
+	
+	for(int i=0; i<3; i++)
+	{
+		usart_write(BC95COM, IMEIGET, strlen(IMEIGET));
+		
+		if(usart_read(BC95COM, buf, sizeof(buf), 100) > 0)
+		{
+			pStart = memmem(buf, sizeof(buf), IMEIRTN, strlen(IMEIRTN));
+			pEnd = memmem(buf, sizeof(buf), ENDOK, strlen(ENDOK));
+			
+			if(pStart != NULL && pEnd != NULL && pEnd-pStart-strlen(IMEIRTN)==15)
+			{
+				memcpy(pIMEI, pStart+strlen(IMEIRTN), 15);
+				ret = 0;
+			}
+		}
+	}
   
   return ret;
 }
@@ -603,20 +650,75 @@ static int get_NBAND(int *pNand)
   uint8_t *pEnd = NULL;
   char buf[128] = "";
   
-  usart_write(BC95COM, NBANDGET, strlen(NBANDGET));
+  
   
   ret = -1;
-  if(usart_read(BC95COM, buf, sizeof(buf), 300) > 0)
-  {
-    pStart = memmem(buf, sizeof(buf), NBANDRTN, strlen(NBANDRTN));
-    pEnd = memmem(buf, sizeof(buf), ENDOK, strlen(ENDOK));
-    
-    if(pStart != NULL && pEnd != NULL && pEnd-pStart-strlen(NBANDRTN)==1)
-    {
-      *pNand = (pStart+strlen(NBANDRTN))[0]-'0';
-      ret = 0;
-    }
-  }
+	for(int i=0; i<3; i++)
+	{
+		usart_write(BC95COM, NBANDGET, strlen(NBANDGET));
+		if(usart_read(BC95COM, buf, sizeof(buf), 300) > 0)
+		{
+			pStart = memmem(buf, sizeof(buf), NBANDRTN, strlen(NBANDRTN));
+			pEnd = memmem(buf, sizeof(buf), ENDOK, strlen(ENDOK));
+			
+			if(pStart != NULL && pEnd != NULL && pEnd-pStart-strlen(NBANDRTN)==1)
+			{
+				*pNand = (pStart+strlen(NBANDRTN))[0]-'0';
+				ret = 0;
+				break;
+			}
+		}
+	}
+  
+  return ret;
+}
+
+//查询是否附着网络
+static int get_CGATT(int *pCGATT)
+{
+  int ret = 0;
+  uint8_t *pStart = NULL;
+  uint8_t *pEnd = NULL;
+  char buf[128] = "";
+
+  ret = -1;
+	for(int i=0; i<3; i++)
+	{
+		usart_write(BC95COM, CGATTGET, strlen(CGATTGET));
+		if(usart_read(BC95COM, buf, sizeof(buf), 300) > 0)
+		{
+			pStart = memmem(buf, sizeof(buf), CGATTRTN, strlen(CGATTRTN));
+			pEnd = memmem(buf, sizeof(buf), ENDOK, strlen(ENDOK));
+			
+			if(pStart != NULL && pEnd != NULL && pEnd-pStart-strlen(CGATTRTN)==1)
+			{
+				*pCGATT = (pStart+strlen(CGATTRTN))[0]-'0';
+				ret = 0;
+				break;
+			}
+		}
+	}
+  
+  return ret;
+}
+
+//设置附着网络
+static int set_CGATT(int CGATT)
+{
+  int ret = 0;
+  char buf[128] = "";
+
+  ret = -1;
+	for(int i=0; i<3; i++)
+	{
+		snprintf(buf, sizeof(buf), "%s%d\r\n", CGATTSET, CGATT);
+		usart_write(BC95COM, buf, strlen(buf));
+		if(wait_OK(100) == 0)
+		{
+			ret = 0;
+			break;
+		}
+	}
   
   return ret;
 }
@@ -661,7 +763,6 @@ static int bc95_cfgBaudRate(uint32_t old_br, uint32_t new_br)
   }
   
   return ret;
-  
 }
 
 
@@ -670,6 +771,8 @@ static int config_bc95()
 {
   int status = 0;
   char buf[128] = "";
+	
+	usart_configure(BC95COM, BC95ORGBAUDRATE, 1, 0);
 	
 	//reset bc95
   GPIO_ResetBits(GPIOA, GPIO_Pin_11);
@@ -722,25 +825,145 @@ static int config_bc95()
   return status;
 }
 
+static int setDevicStatus(DeviceStatus status)
+{
+	l_devStatus = status;
+	
+	return 0;
+}
+
+static DeviceStatus getDevicStatus()
+{
+	return l_devStatus;
+}
+
+//bc95状态判断和恢复，如果附着失败就重启bc95重新附着。
+static DeviceStatus BC95_statusManage(int CGATTLoops, rt_tick_t interval, uint64_t CGATT_timeout)
+{
+	DeviceStatus status = DEVICEOK;
+	int bc95ReConfig = 0;
+	
+	for(int i=0; i<CGATTLoops; i++)
+	{
+		int ret = 0;
+		int nCGATT = 0;
+
+		//重启配置bc95
+		if(bc95ReConfig == 1)
+		{
+			ret = config_bc95();
+			if(ret != 0)
+			{
+				status = BC95DONTWORK;
+				break;
+			}
+			else
+				continue;
+		}
+
+		bc95ReConfig = 0;
+		ret	= get_CGATT(&nCGATT);
+		
+		//无法获取CGATT就重启配置bc95
+		if(ret != 0)
+		{
+			bc95ReConfig = 1;
+			continue;
+		}
+		
+		//判断附着状态
+		if(nCGATT == 1)
+		{
+			status = DEVICEOK;
+			break;
+		}
+		else
+		{
+			uint64_t LastTime = get_timestamp();
+			status = CGATTTIMEOUT;
+			set_CGATT(1);
+			while(get_timestamp() <= LastTime+CGATT_timeout)
+			{
+				ret = get_CGATT(&nCGATT);
+				if(ret != 0)
+				{
+					status = BC95DONTWORK;
+					bc95ReConfig = 1;
+					break;
+				}
+				else
+				{
+					if(nCGATT == 1)
+					{
+						status = DEVICEOK;
+						break;
+					}
+					else
+						rt_thread_delay(interval);
+				}
+			}
+			
+			//如果超时就重启重新配置bc95
+			if(status == CGATTTIMEOUT)
+				bc95ReConfig = 1;
+		}
+		
+	}
+	
+	return status;
+}
+
 
 static void thread_msgSend(void *args)
 {
 	while(1)
 	{
-		char msgData[512] = "";
+		uint8_t msgData[512] = "";
 		uint16_t msgSize = 0;
 		int ret = 0;
-		ret = msg_pop(l_hMsgFifo, &msgData, &msgSize, 30);
+		int repaets = 3;
+		uint32_t failTimes = 0;
+		DeviceStatus devStatus = DEVICEOK;
+		uint32_t popWait = 3;
+		
+		ret = msg_pop(l_hMsgFifo, &msgData, &msgSize, rt_tick_from_millisecond(popWait*1000));
 		if(ret == 0)
 		{
 			if(msgSize > 0)
 			{
-				usart_write(USERCOM, msgData, msgSize);
+				failTimes = 0;
+				
+				while(1)
+				{
+					if(l_nbModuConfig.sendMode == 0)
+						ret = coap_msgSend(msgData, msgSize, repaets);
+					else
+						ret = udp_msgSend(msgData, msgSize, repaets);
+				
+					if(ret != 0)//发送失败进入状态判断和恢复。
+					{
+						failTimes++;//失败次数决定状态判断和恢复的间隔  间隔为failTimes*10分钟
+//						devStatus = BC95_statusManage(3, rt_tick_from_millisecond(1*1000), 10*1000);
+						devStatus = BC95_statusManage(3, rt_tick_from_millisecond(1*1000), 2*60*1000); //入网判断时间2分钟
+						setDevicStatus(devStatus);
+						if(devStatus != DEVICEOK)
+						{
+//							rt_thread_delay(rt_tick_from_millisecond(failTimes*1000));
+							rt_thread_delay(rt_tick_from_millisecond(failTimes*10*60*1000));
+						}
+					}
+					else
+					{
+						failTimes = 0;
+						break;
+					}
+				}
+
 			}
 		}
 		else if(ret == -RT_ETIMEOUT)
 		{
-			
+
 		}
 		
 	}
@@ -777,7 +1000,10 @@ static void main_entry(void *args)
   BC95COM = usart_init("uart1", BC95ORGBAUDRATE, 1, 0);
   USERCOM = usart_init("uart3", l_nbModuConfig.baudrate, l_nbModuConfig.stopbit, l_nbModuConfig.parity);
   
-  config_bc95();
+  if(config_bc95() != 0)
+	{
+		setDevicStatus(BC95DONTWORK);
+	}
 	
 	l_hMsgFifo = msg_init(COAP_MAXLEN, 5);
   
@@ -793,7 +1019,7 @@ static void main_entry(void *args)
     ghConfig();
   }
 
-	rt_thread_t ht_msgSend = rt_thread_create("thread_msgSend", thread_msgSend, RT_NULL, 1024, 3, 10);
+	rt_thread_t ht_msgSend = rt_thread_create("thread_msgSend", thread_msgSend, RT_NULL, 1024+512, 3, 10);
 	if (ht_msgSend!= RT_NULL)
 		rt_thread_startup(ht_msgSend);
 	
@@ -816,15 +1042,56 @@ static void main_entry(void *args)
 	}
 }
 
+static void status_entry(void *args)
+{
+	while(1)
+	{
+		DeviceStatus status = getDevicStatus();
+		int blinkInter = 200;
+		
+		if(status == DEVICEOK)
+		{
+			GPIO_SetBits(GPIOB, GPIO_Pin_14);
+		}
+		else if(status == BC95DONTWORK)
+		{
+			for(int i=0; i<2; i++)
+			{
+				GPIO_ResetBits(GPIOB, GPIO_Pin_14);
+				rt_thread_delay(rt_tick_from_millisecond(blinkInter));
+				GPIO_SetBits(GPIOB, GPIO_Pin_14);
+				rt_thread_delay(rt_tick_from_millisecond(blinkInter));
+			}
+		}
+		else if(status == CGATTTIMEOUT)
+		{
+			for(int i=0; i<3; i++)
+			{
+				GPIO_ResetBits(GPIOB, GPIO_Pin_14);
+				rt_thread_delay(rt_tick_from_millisecond(blinkInter));
+				GPIO_SetBits(GPIOB, GPIO_Pin_14);
+				rt_thread_delay(rt_tick_from_millisecond(blinkInter));
+			}
+		}
+		
+		rt_thread_delay(rt_tick_from_millisecond(1500));
+	}
+		
+}
+
 int main(void)
 {
-	rt_thread_t thread = rt_thread_create("main_entry", main_entry, RT_NULL, 2048, 2, 10);
-	if (thread!= RT_NULL)
-		rt_thread_startup(thread);
+	rt_thread_t ht_main = rt_thread_create("main_entry", main_entry, RT_NULL, 2048, 2, 10);
+	if (ht_main!= RT_NULL)
+		rt_thread_startup(ht_main);
+	
+	rt_thread_t ht_status = rt_thread_create("status_entry", status_entry, RT_NULL, 256, 6, 10);
+	if (ht_status!= RT_NULL)
+		rt_thread_startup(ht_status);
 	
 	while(1)
 	{
-		rt_thread_delay(20);
+		rt_thread_delay(rt_tick_from_millisecond(2*1000));
 	}
 }
 

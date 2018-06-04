@@ -37,6 +37,13 @@ typedef enum tag_ModeToRun{
   lucTrans,
 }ModeToRun; 
 
+typedef enum tag_DeviceStatus{
+	DEVICEOK = 0,
+  BC95DONTWORK = -1,
+	CGATTTIMEOUT = -2,
+	
+}DeviceStatus;
+
 
 typedef int (*ghCmd_excute)(char *, int);
 
@@ -64,6 +71,9 @@ typedef struct tag_cmdExcute
 #define IMEIRTN "+CGSN:"
 #define NBANDGET "AT+NBAND?\r\n"
 #define NBANDRTN "+NBAND:"
+#define CGATTGET "AT+CGATT?\r\n"
+#define CGATTSET "AT+CGATT="
+#define CGATTRTN "+CGATT:"
 #define ENDOK "\r\n\r\nOK"
 
 #define ATIPPORT "AT+IPPORT" //…Ë÷√ip∫Õport   
