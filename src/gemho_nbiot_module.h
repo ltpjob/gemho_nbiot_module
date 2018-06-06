@@ -20,6 +20,7 @@ typedef struct tag_nbModu_config
   uint32_t baudrate;
   uint8_t stopbit;
   uint8_t parity;
+	uint8_t watchdog;
 }nbModu_config;
 
 typedef struct tag_confSaveUnit
@@ -30,6 +31,12 @@ typedef struct tag_confSaveUnit
 
 #pragma pack()
 
+typedef struct tag_lightAction
+{
+  uint32_t interval_time;
+  uint32_t blink_times;
+	uint32_t stop_time;
+}lightAction;
 
 typedef enum tag_ModeToRun{
   atDebug = 0,
@@ -41,7 +48,7 @@ typedef enum tag_DeviceStatus{
 	DEVICEOK = 0,
   BC95DONTWORK = -1,
 	CGATTTIMEOUT = -2,
-	
+	CGATTTGETFAIL = -3,
 }DeviceStatus;
 
 
@@ -82,11 +89,13 @@ typedef struct tag_cmdExcute
 #define ATRS232EQ "AT+RS232="
 #define ATSEMO "AT+SEMO"    //发送模式选择  
 #define ATSEMOEQ "AT+SEMO=" 
+#define ATWDT "AT+WDT"    //是否开启看门狗  
+#define ATWDTEQ "AT+WDT=" 
 #define ATIMEIBD "AT+IMEIBD"//获取imei和nband
 #define ATSAVE "AT+SAVE"   //存储配置
 #define ATDELO "AT+DELO"  //还原默认配置
 #define UDCMD "UNDEFINED CMD\r\n"
-   
+#define KPMFT "key push message for test"
    
 #ifdef __cplusplus
  }
