@@ -406,7 +406,8 @@ static void RST_Configuration(void)
 }
 
 //控制中间的灯
-static int midLight_action(uint32_t interval_time, uint32_t blink_times, uint32_t stop_time)
+static int midLight_action(uint32_t interval_time, 
+	uint32_t blink_times, uint32_t stop_time, uint32_t urgent)
 {
 	lightAction la;
 	int ret = 0;
@@ -415,7 +416,20 @@ static int midLight_action(uint32_t interval_time, uint32_t blink_times, uint32_
 	la.blink_times = blink_times;
 	la.stop_time = stop_time;
 	
-	ret = rt_mq_send(l_mq_midLight, &la, sizeof(la));
+	if(urgent == 1)
+	{
+		ret = rt_mq_urgent(l_mq_midLight, &la, sizeof(la));
+		if(ret != RT_EOK)
+		{
+			lightAction tmp;
+			rt_mq_recv(l_mq_midLight, &tmp, sizeof(tmp), RT_WAITING_NO);
+			ret = rt_mq_urgent(l_mq_midLight, &la, sizeof(la));
+		}
+	}
+	else
+	{
+		ret = rt_mq_send(l_mq_midLight, &la, sizeof(la));
+	}
 	
 	return ret;
 }
@@ -603,7 +617,7 @@ static ModeToRun start_mode()
   {
     mode = lucTrans;
 		msg_push(l_hMsgFifo, buf, len);
-		midLight_action(50, 2, 500);
+		midLight_action(50, 2, 500, 0);
   }
   
   return mode;
@@ -1021,7 +1035,7 @@ static void thread_msgSend(void *args)
 					{
 						failTimes = 0;
 						//发送完成,闪灯
-						midLight_action(50, 8, 300);
+						midLight_action(50, 8, 300, 0);
 						break;
 					}
 				}
@@ -1059,7 +1073,7 @@ static void main_entry(void *args)
 		setDevicStatus(BC95DONTWORK);
 	}
 	
-	midLight_action(2000, 1, 200);
+	midLight_action(2000, 1, 200, 1);
 	
 	l_hMsgFifo = msg_init(COAP_MAXLEN, 5);
 	
@@ -1094,7 +1108,7 @@ static void main_entry(void *args)
 			if(len > 0)
 			{
 				msg_push(l_hMsgFifo, buf, len);
-				midLight_action(50, 2, 500);
+				midLight_action(50, 2, 500, 0);
 			}
 		}
 	}
@@ -1171,7 +1185,7 @@ static void key_entry(void *args)
 				if(save_config(&l_default_nbMCFG) == 0)
 				{
 					//控制灯闪16下
-					midLight_action(100, 16, 1000);
+					midLight_action(100, 16, 1000, 1);
 				}
 			}
 			else if(uHoldTime>0 && uHoldTime<1*500)
