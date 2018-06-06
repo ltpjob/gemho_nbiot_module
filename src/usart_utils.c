@@ -89,7 +89,7 @@ int usart_read(USART_TypeDef* USARTx, void *d, size_t len, int timeout)
       data[cnt++] = USART_ReceiveData(USARTx);
     }
     
-    if((timeout != -1 && get_timestamp()-uLastRcvTime > timeout) || cnt >= len)
+    if((timeout != -1 && get_timestamp()-uLastRcvTime >= timeout) || cnt >= len)
       break;
   }
   

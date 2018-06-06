@@ -276,7 +276,7 @@ cmdExcute cmdExe[] =
 void RCC_Configuration(void)
 {
   /* Enable GPIO clock */
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOB | RCC_APB2Periph_GPIOB | RCC_APB2Periph_USART1 | RCC_APB2Periph_AFIO, ENABLE);
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOB | RCC_APB2Periph_USART1 | RCC_APB2Periph_AFIO, ENABLE);
   
   RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3 | RCC_APB1Periph_I2C1, ENABLE);
 
@@ -336,6 +336,29 @@ void GPIO_Configuration(void)
 }
 
 void RST_Configuration(void)
+{
+  NVIC_InitTypeDef NVIC_InitStructure;
+  EXTI_InitTypeDef EXTI_InitStructure;
+  
+  GPIO_EXTILineConfig(GPIO_PortSourceGPIOB, GPIO_PinSource13);
+
+  /* Configure EXTI0 line */
+  EXTI_InitStructure.EXTI_Line = EXTI_Line13;
+  EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
+  EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Falling;  
+  EXTI_InitStructure.EXTI_LineCmd = ENABLE;
+  EXTI_Init(&EXTI_InitStructure);
+
+  /* Enable and set EXTI0 Interrupt to the lowest priority */
+  NVIC_InitStructure.NVIC_IRQChannel = EXTI15_10_IRQn;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 3;
+  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_Init(&NVIC_InitStructure);
+}
+
+
+void HOSTWAKE_Configuration(void)
 {
   NVIC_InitTypeDef NVIC_InitStructure;
   EXTI_InitTypeDef EXTI_InitStructure;
@@ -747,6 +770,7 @@ int main(void)
   SystemInit();
   RCC_Configuration();
   GPIO_Configuration();
+  NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);
   tick_ms_init();
   RST_Configuration();
   config_init();
@@ -819,9 +843,9 @@ void EXTI15_10_IRQHandler(void)
       while(count--)
       {
         GPIO_ResetBits(GPIOB, GPIO_Pin_15);
-        loop_ms(100);
+        delay_ms(100);
         GPIO_SetBits(GPIOB, GPIO_Pin_15);
-        loop_ms(100);
+        delay_ms(100);
       }
     }
     
