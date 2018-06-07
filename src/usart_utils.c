@@ -10,7 +10,7 @@ void *usart_init(const char *name, uint32_t USART_BaudRate,
 	if (hDev != RT_NULL)
 	{
 		if (RT_EOK == rt_device_open(hDev, RT_DEVICE_FLAG_RDWR | RT_DEVICE_FLAG_INT_RX |
-                          RT_DEVICE_FLAG_INT_TX |   RT_DEVICE_FLAG_DMA_RX))
+                          RT_DEVICE_FLAG_INT_TX))
 		{
 			if(usart_configure(hDev, USART_BaudRate, stopbig, parity) != 0)
 			{

@@ -152,18 +152,34 @@
         <Bp>
           <Number>0</Number>
           <Type>0</Type>
-          <LineNumber>1182</LineNumber>
+          <LineNumber>327</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134231978</Address>
+          <Address>134239048</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
           <SizeOfObject>0</SizeOfObject>
           <BreakByAccess>0</BreakByAccess>
           <BreakIfRCount>1</BreakIfRCount>
-          <Filename>.\src\main.c</Filename>
+          <Filename>d:\Keil_v5\ARM\PACK\rt-thread\rtthread\3.0.3\libcpu\arm\cortex-m3\cpuport.c</Filename>
           <ExecCommand></ExecCommand>
-          <Expression>\\gemho_nbiot_module\src/main.c\1182</Expression>
+          <Expression>\\gemho_nbiot_module\d:/Keil_v5/ARM/PACK/rt-thread/rtthread/3.0.3/libcpu/arm/cortex-m3/cpuport.c\327</Expression>
+        </Bp>
+        <Bp>
+          <Number>1</Number>
+          <Type>0</Type>
+          <LineNumber>342</LineNumber>
+          <EnabledFlag>1</EnabledFlag>
+          <Address>134239070</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>1</BreakIfRCount>
+          <Filename>d:\Keil_v5\ARM\PACK\rt-thread\rtthread\3.0.3\libcpu\arm\cortex-m3\cpuport.c</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression>\\gemho_nbiot_module\d:/Keil_v5/ARM/PACK/rt-thread/rtthread/3.0.3/libcpu/arm/cortex-m3/cpuport.c\342</Expression>
         </Bp>
       </Breakpoint>
       <WatchWindow1>
@@ -465,7 +481,7 @@
 
   <Group>
     <GroupName>::RTOS</GroupName>
-    <tvExp>1</tvExp>
+    <tvExp>0</tvExp>
     <tvExpOptDlg>0</tvExpOptDlg>
     <cbSel>0</cbSel>
     <RteFlg>1</RteFlg>

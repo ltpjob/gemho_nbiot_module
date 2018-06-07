@@ -469,7 +469,7 @@ static int wait_OK_timeout(int timeout)
 		if(cnt > sizeof(buf))
 			cnt = sizeof(buf);
 		
-		len = usart_read(BC95COM, buf+cnt, sizeof(buf)+cnt, 20);
+		len = usart_read(BC95COM, buf+cnt, sizeof(buf)-cnt, 20);
 		if(len > 0)
 		{
 			cnt += len;
@@ -626,27 +626,27 @@ static ModeToRun start_mode()
 //gh≈‰÷√
 void ghConfig()
 {
-  int ret = 0;
+  int len = 0;
   uint8_t *pStart = NULL;
   uint8_t *pEnd = NULL;
   uint8_t buf[128] = "";
-  int len = 0;
+  int cnt = 0;
   
   
   while(1)
   {
-    ret = usart_read(USERCOM, buf+len, sizeof(buf)-len, 10);
-    len += ret;
+    len = usart_read(USERCOM, buf+cnt, sizeof(buf)-cnt, 10);
+    cnt += len;
     
-    if(len == 0)
+    if(cnt == 0)
       continue;
       
-    pEnd = memmem(buf, len, ENDFLAG, strlen(ENDFLAG));
+    pEnd = memmem(buf, cnt, ENDFLAG, strlen(ENDFLAG));
     if(pEnd != NULL)
     {
       for(int i=0; i<sizeof(cmdExe)/sizeof(cmdExe[0]); i++)
       {
-        pStart = memmem(buf, len, cmdExe[i].cmd, strlen(cmdExe[i].cmd));
+        pStart = memmem(buf, cnt, cmdExe[i].cmd, strlen(cmdExe[i].cmd));
         if(pStart == buf)
         {
           cmdExe[i].ce_fun((char *)pStart, pEnd - pStart);
@@ -659,13 +659,13 @@ void ghConfig()
       }
       
       memset(buf, 0, sizeof(buf));
-      len = 0;
+      cnt = 0;
     }
     
-    if(len >= sizeof(buf))
+    if(cnt >= sizeof(buf))
     {
       memset(buf, 0, sizeof(buf));
-      len = 0;
+      cnt = 0;
       usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
     }
     
@@ -1077,7 +1077,7 @@ static void main_entry(void *args)
 	
 	l_hMsgFifo = msg_init(COAP_MAXLEN, 5);
 	
-	rt_thread_t ht_msgSend = rt_thread_create("thread_msgSend", thread_msgSend, RT_NULL, 1024+512, 3, 10);
+	rt_thread_t ht_msgSend = rt_thread_create("thread_msgSend", thread_msgSend, RT_NULL, 1024+512, 3, rt_tick_from_millisecond(10));
 	if (ht_msgSend!= RT_NULL)
 		rt_thread_startup(ht_msgSend);
   
@@ -1249,23 +1249,23 @@ int main(void)
 	load_config();
 	l_mq_midLight = rt_mq_create("l_mq_midLight", sizeof(lightAction), 10, RT_IPC_FLAG_PRIO);
 	
-	rt_thread_t ht_key = rt_thread_create("key_entry", key_entry, RT_NULL, 256, 1, 10);
+	rt_thread_t ht_key = rt_thread_create("key_entry", key_entry, RT_NULL, 256, 1, rt_tick_from_millisecond(10));
 	if (ht_key!= RT_NULL)
 		rt_thread_startup(ht_key);
 	
-	rt_thread_t ht_wdt = rt_thread_create("wdt_entry", wdt_entry, RT_NULL, 128, 1, 10);
+	rt_thread_t ht_wdt = rt_thread_create("wdt_entry", wdt_entry, RT_NULL, 128, 1, rt_tick_from_millisecond(10));
 	if (ht_wdt!= RT_NULL)
 		rt_thread_startup(ht_wdt);
 	
-	rt_thread_t ht_main = rt_thread_create("main_entry", main_entry, RT_NULL, 2048, 2, 10);
+	rt_thread_t ht_main = rt_thread_create("main_entry", main_entry, RT_NULL, 2048, 2, rt_tick_from_millisecond(10));
 	if (ht_main!= RT_NULL)
 		rt_thread_startup(ht_main);
 	
-	rt_thread_t ht_status = rt_thread_create("status_entry", status_entry, RT_NULL, 256, 5, 10);
+	rt_thread_t ht_status = rt_thread_create("status_entry", status_entry, RT_NULL, 256, 5, rt_tick_from_millisecond(10));
 	if (ht_status!= RT_NULL)
 		rt_thread_startup(ht_status);
 	
-	rt_thread_t ht_midLight = rt_thread_create("ht_midLight", midLight_entry, RT_NULL, 256, 5, 10);
+	rt_thread_t ht_midLight = rt_thread_create("ht_midLight", midLight_entry, RT_NULL, 256, 5, rt_tick_from_millisecond(10));
 	if (ht_midLight!= RT_NULL)
 		rt_thread_startup(ht_midLight);
 	
