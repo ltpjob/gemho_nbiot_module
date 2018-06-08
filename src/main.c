@@ -37,6 +37,93 @@ static nbModu_config l_nbModuConfig;
 static char l_IMEI[15] = "";
 static int l_nband = 0;
 
+//IMSI码
+static int ATCIMI_cmd(char *cmd, int len)
+{
+	char buf[128] = "";
+	int size = 0;
+  
+  if(len > sizeof(buf)-1)
+  {
+    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+    return 0;
+  }
+	
+	memcpy(buf, cmd, len);
+	
+	if(strcmp(buf, ATCIMI) == 0)
+  {
+    snprintf(buf, sizeof(buf), "%s\r\n", ATCIMI);
+		usart_write(BC95COM, buf, strlen(buf));
+		size = usart_read(BC95COM, buf, sizeof(buf), 30);
+    usart_write(USERCOM, buf, size);
+  }
+  else
+  {
+    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+  }
+	
+	return 0;
+}
+
+//信号质量
+static int ATCSQ_cmd(char *cmd, int len)
+{
+	char buf[128] = "";
+	int size = 0;
+  
+  if(len > sizeof(buf)-1)
+  {
+    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+    return 0;
+  }
+	
+	memcpy(buf, cmd, len);
+	
+	if(strcmp(buf, ATCSQ) == 0)
+  {
+    snprintf(buf, sizeof(buf), "%s\r\n", ATCSQ);
+		usart_write(BC95COM, buf, strlen(buf));
+		size = usart_read(BC95COM, buf, sizeof(buf), 30);
+    usart_write(USERCOM, buf, size);
+  }
+  else
+  {
+    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+  }
+	
+	return 0;
+}
+
+//模块状态
+static int ATNUESTATS_cmd(char *cmd, int len)
+{
+	char buf[256] = "";
+	int size = 0;
+  
+  if(len > sizeof(buf)-1)
+  {
+    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+    return 0;
+  }
+	
+	memcpy(buf, cmd, len);
+	
+	if(strcmp(buf, ATNUESTATS) == 0)
+  {
+    snprintf(buf, sizeof(buf), "%s\r\n", ATNUESTATS);
+		usart_write(BC95COM, buf, strlen(buf));
+		size = usart_read(BC95COM, buf, sizeof(buf), 30);
+    usart_write(USERCOM, buf, size);
+  }
+  else
+  {
+    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+  }
+	
+	return 0;
+}
+
 //baudrate设置
 static int ATRS232_cmd(char *cmd, int len)
 {
@@ -306,9 +393,11 @@ static int ATDELO_cmd(char *cmd, int len)
   return ret;
 }
 
-
 static cmdExcute cmdExe[] = 
 {
+	{ATCIMI, ATCIMI_cmd},
+	{ATCSQ, ATCSQ_cmd},
+	{ATNUESTATS, ATNUESTATS_cmd},
   {ATRS232, ATRS232_cmd},
   {ATIPPORT, ATIPPORT_cmd},
   {ATIMEIBD, ATIMEIBD_cmd},
