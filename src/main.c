@@ -153,6 +153,32 @@ static int ATCGATT_cmd(char *cmd, int len)
 	return 0;
 }
 
+//获取版本号
+static int ATVER_cmd(char *cmd, int len)
+{
+	char buf[128] = "";
+  
+  if(len > sizeof(buf)-1)
+  {
+    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+    return 0;
+  }
+	
+	memcpy(buf, cmd, len);
+	
+	if(strcmp(buf, ATVER) == 0)
+  {
+    snprintf(buf, sizeof(buf), "+VER:%s\r\n", VERSION);
+    usart_write(USERCOM, buf, strlen(buf));
+  }
+  else
+  {
+    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+  }
+	
+	return 0;
+}
+
 //baudrate设置
 static int ATRS232_cmd(char *cmd, int len)
 {
@@ -428,6 +454,7 @@ static cmdExcute cmdExe[] =
 	{ATCSQ, ATCSQ_cmd},
 	{ATNUESTATS, ATNUESTATS_cmd},
 	{ATCGATT, ATCGATT_cmd},
+	{ATVER, ATVER_cmd},
   {ATRS232, ATRS232_cmd},
   {ATIPPORT, ATIPPORT_cmd},
   {ATIMEIBD, ATIMEIBD_cmd},

@@ -87,6 +87,7 @@ typedef struct tag_cmdExcute
 #define ATCSQ "AT+CSQ" //获取信号强度
 #define ATNUESTATS "AT+NUESTATS" //获取模块状态
 #define ATCGATT "AT+CGATT" //网络附着情况
+#define ATVER "AT+VER" //获取版本号
 
 #define ATIPPORT "AT+IPPORT" //设置ip和port   
 #define ATIPPORTEQ "AT+IPPORT=" 
@@ -101,6 +102,8 @@ typedef struct tag_cmdExcute
 #define ATDELO "AT+DELO"  //还原默认配置
 #define UDCMD "UNDEFINED CMD\r\n"
 #define KPMFT "key push message for test"
+
+#define VERSION "1.0.0.0"
    
 #ifdef __cplusplus
  }
