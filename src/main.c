@@ -124,6 +124,35 @@ static int ATNUESTATS_cmd(char *cmd, int len)
 	return 0;
 }
 
+//网络附着情况
+static int ATCGATT_cmd(char *cmd, int len)
+{
+	char buf[128] = "";
+	int size = 0;
+  
+  if(len > sizeof(buf)-1)
+  {
+    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+    return 0;
+  }
+	
+	memcpy(buf, cmd, len);
+	
+	if(strcmp(buf, ATCGATT) == 0)
+  {
+    snprintf(buf, sizeof(buf), "%s?\r\n", ATCGATT);
+		usart_write(BC95COM, buf, strlen(buf));
+		size = usart_read(BC95COM, buf, sizeof(buf), 30);
+    usart_write(USERCOM, buf, size);
+  }
+  else
+  {
+    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+  }
+	
+	return 0;
+}
+
 //baudrate设置
 static int ATRS232_cmd(char *cmd, int len)
 {
@@ -398,6 +427,7 @@ static cmdExcute cmdExe[] =
 	{ATCIMI, ATCIMI_cmd},
 	{ATCSQ, ATCSQ_cmd},
 	{ATNUESTATS, ATNUESTATS_cmd},
+	{ATCGATT, ATCGATT_cmd},
   {ATRS232, ATRS232_cmd},
   {ATIPPORT, ATIPPORT_cmd},
   {ATIMEIBD, ATIMEIBD_cmd},

@@ -86,6 +86,7 @@ typedef struct tag_cmdExcute
 #define ATCIMI "AT+CIMI" //获取IMSI
 #define ATCSQ "AT+CSQ" //获取信号强度
 #define ATNUESTATS "AT+NUESTATS" //获取模块状态
+#define ATCGATT "AT+CGATT" //网络附着情况
 
 #define ATIPPORT "AT+IPPORT" //设置ip和port   
 #define ATIPPORTEQ "AT+IPPORT=" 
