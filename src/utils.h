@@ -20,3 +20,5 @@ int checkConfigRS232(char *pIPort, uint32_t *pOutBaudrate, uint8_t *pOutStopBit,
 #endif
 
 #endif /* __UTILS_H */
+ 
+ 

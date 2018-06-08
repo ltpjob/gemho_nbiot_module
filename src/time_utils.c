@@ -1,10 +1,9 @@
 #include "time_utils.h"
 #include <stdio.h>
-#include "stm32f10x_conf.h"
 #include "stm32f10x.h"
 #include "stm32f10x_iwdg.h"
 
-//#define ENABLEIWDG
+#define ENABLEIWDG
 
 static volatile uint64_t l_timestamp = 0;
 

@@ -6,15 +6,16 @@
 #endif 
    
 #include <stdio.h>
-#include "stm32f10x.h"
 
+void *usart_init(const char *name, uint32_t USART_BaudRate, 
+						 uint8_t stopbig, uint8_t parity);
 
-int usart_init(USART_TypeDef* USARTx, uint32_t USART_BaudRate, 
+int usart_configure(void *USARTx, uint32_t USART_BaudRate, 
                uint8_t stopbig, uint8_t parity);
  
-int usart_write(USART_TypeDef* USARTx, const void *d, size_t len);
+int usart_write(void* USARTx, const void *d, size_t len);
 
-int usart_read(USART_TypeDef* USARTx, void *d, size_t len, int timeout);
+int usart_read(void* USARTx, void *d, size_t len, int timeout);
    
    
    
@@ -26,3 +27,8 @@ int usart_read(USART_TypeDef* USARTx, void *d, size_t len, int timeout);
 #endif
 
 #endif /* __USART_UTILS_H */
+
+
+
+
+

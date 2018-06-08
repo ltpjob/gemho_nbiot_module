@@ -1,5 +1,4 @@
 #include "SEE_i2c.h"
-#include "stm32f10x_conf.h"
 #include "stm32f10x.h"
 #include <stdio.h>
 
@@ -255,3 +254,6 @@ uint32_t SEE_i2c_read(uint8_t* rData, uint16_t ReadAddr)
   
   return sEE_OK;
 }
+
+
+

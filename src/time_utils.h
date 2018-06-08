@@ -9,10 +9,10 @@
 
 
 //获取时间戳
-uint64_t get_timestamp();
+uint64_t get_timestamp(void);
 
 //systick初始化
-void tick_ms_init();
+void tick_ms_init(void);
 
 //systick中断
 void SysTick_Handler(void);

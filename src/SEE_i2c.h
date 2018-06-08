@@ -1,7 +1,12 @@
 #ifndef _SEE_I2C_H_
 #define _SEE_I2C_H_
 
-#include "stm32f10x_conf.h"
+#ifdef __cplusplus
+ extern "C" {
+#endif 
+
+#include <stdio.h>
+#include <stdint.h>
 
 #define I2C_SPEED 200000
 #define sEE_I2C I2C1
@@ -13,7 +18,7 @@
 #define sEE_FAIL                  1   
   
 
-void SEE_i2c_init();
+void SEE_i2c_init(void);
 
 uint32_t sEE_WaitEepromStandbyState(void);
 
@@ -22,4 +27,12 @@ uint32_t SEE_i2c_write(uint8_t wData, uint16_t WriteAddr);
 uint32_t SEE_i2c_read(uint8_t* rData, uint16_t ReadAddr);
 
 
+#ifdef __cplusplus
+ }
 #endif
+
+
+#endif
+
+
+
