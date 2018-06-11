@@ -667,8 +667,8 @@ static int coap_msgSend(uint8_t *data, uint32_t len, uint32_t repeats)
 	uint32_t count = 0;
 	int ret = -1;
   
-  if(len > COAP_MAXLEN)
-    len = COAP_MAXLEN;
+  if(len > MSG_MAXLEN)
+    len = MSG_MAXLEN;
   
 	for(int i=0; i<repeats; i++)
 	{
@@ -701,8 +701,8 @@ static int udp_msgSend(uint8_t *data, uint32_t len, uint32_t repeats)
 	uint32_t count = 0;
 	int ret = -1;
   
-  if(len > COAP_MAXLEN)
-    len = COAP_MAXLEN;
+  if(len > MSG_MAXLEN)
+    len = MSG_MAXLEN;
 	
 	for(int i=0; i<repeats; i++)
 	{
@@ -1221,7 +1221,7 @@ static void main_entry(void *args)
 	
 	midLight_action(2000, 1, 200, 1);
 	
-	l_hMsgFifo = msg_init(COAP_MAXLEN, 5);
+	l_hMsgFifo = msg_init(MSG_MAXLEN, 5);
 	
 	rt_thread_t ht_msgSend = rt_thread_create("thread_msgSend", thread_msgSend, RT_NULL, 1024+512, 3, rt_tick_from_millisecond(10));
 	if (ht_msgSend!= RT_NULL)

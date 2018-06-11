@@ -8,7 +8,7 @@
 #include <stdint.h>   
 
 	 
-#define COAP_MAXLEN (490)
+#define MSG_MAXLEN (490)
    
 #pragma pack(1)
 
@@ -103,7 +103,7 @@ typedef struct tag_cmdExcute
 #define UDCMD "UNDEFINED CMD\r\n"
 #define KPMFT "key push message for test"
 
-#define VERSION "1.0.0.0"
+#define VERSION "1.0.c2f5ce5.0"
    
 #ifdef __cplusplus
  }
