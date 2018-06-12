@@ -21,6 +21,7 @@ typedef struct tag_nbModu_config
   uint8_t stopbit;
   uint8_t parity;
 	uint8_t watchdog;
+	uint8_t msgSave;
 }nbModu_config;
 
 typedef struct tag_confSaveUnit
@@ -89,6 +90,8 @@ typedef struct tag_cmdExcute
 #define ATCGATT "AT+CGATT" //网络附着情况
 #define ATVER "AT+VER" //获取版本号
 
+#define ATMSGS "AT+MSGS" //设置缓存大小   
+#define ATMSGSEQ "AT+MSGS=" 
 #define ATIPPORT "AT+IPPORT" //设置ip和port   
 #define ATIPPORTEQ "AT+IPPORT=" 
 #define ATRS232 "AT+RS232"

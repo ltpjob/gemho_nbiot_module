@@ -28,6 +28,7 @@ static const nbModu_config l_default_nbMCFG =
   .stopbit = 1,
   .parity = 0,
 	.watchdog = 0,
+	.msgSave = 5,
 };
 
 
@@ -301,6 +302,53 @@ static int ATIMEIBD_cmd(char *cmd, int len)
   return 0;
 }
 
+static int ATMSGS_cmd(char *cmd, int len)
+{
+  char buf[128] = "";
+  
+  if(len > sizeof(buf)-1)
+  {
+    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+    return 0;
+  }
+  
+  memcpy(buf, cmd, len);
+  
+  if(strcmp(buf, ATMSGS) == 0)
+  {
+    snprintf(buf, sizeof(buf), "+MSGS:%d\r\n", 
+             l_nbModuConfig.msgSave);
+    usart_write(USERCOM, buf, strlen(buf));
+  }
+  else if(memcmp(buf, ATMSGSEQ, strlen(ATMSGSEQ)) == 0)
+  {
+    int msgSave = -1;
+
+    if(sscanf(buf+strlen(ATMSGSEQ), "%d", &msgSave) == 1)
+    {
+      if(msgSave <1 || msgSave>5)
+      {
+        usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+      }
+      else
+      {
+        l_nbModuConfig.msgSave = msgSave;
+        usart_write(USERCOM, OKSTR, strlen(OKSTR));
+      }
+    }
+    else
+    {
+      usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+    }
+  }
+  else
+  {
+    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+  }
+  
+  return 0;
+}
+
 //…Ë÷√ƒ£ Ω(coap or udp)
 static int ATSEMO_cmd(char *cmd, int len)
 {
@@ -458,6 +506,7 @@ static cmdExcute cmdExe[] =
   {ATRS232, ATRS232_cmd},
   {ATIPPORT, ATIPPORT_cmd},
   {ATIMEIBD, ATIMEIBD_cmd},
+	{ATMSGS, ATMSGS_cmd},
   {ATSEMO, ATSEMO_cmd},
 	{ATWDT, ATWDT_cmd},
   {ATSAVE, ATSAVE_cmd},
@@ -1221,7 +1270,7 @@ static void main_entry(void *args)
 	
 	midLight_action(2000, 1, 200, 1);
 	
-	l_hMsgFifo = msg_init(MSG_MAXLEN, 5);
+	l_hMsgFifo = msg_init(MSG_MAXLEN, l_nbModuConfig.msgSave);
 	
 	rt_thread_t ht_msgSend = rt_thread_create("thread_msgSend", thread_msgSend, RT_NULL, 1024+512, 3, rt_tick_from_millisecond(10));
 	if (ht_msgSend!= RT_NULL)
