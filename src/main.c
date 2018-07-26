@@ -1270,8 +1270,8 @@ static rt_err_t urx_input(rt_device_t dev, rt_size_t size)
 
 static void main_entry(void *args)
 {  
-  BC95COM = usart_init("uart2", BC95ORGBAUDRATE, 1, 0);
-  USERCOM = usart_init("uart3", l_nbModuConfig.baudrate, l_nbModuConfig.stopbit, l_nbModuConfig.parity);
+  BC95COM = usart_init("uart2", BC95ORGBAUDRATE, 1, 0, NULL);
+  USERCOM = usart_init("uart3", l_nbModuConfig.baudrate, l_nbModuConfig.stopbit, l_nbModuConfig.parity, NULL);
   
   if(config_bc95() != 0)
 	{
