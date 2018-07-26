@@ -519,9 +519,9 @@ static cmdExcute cmdExe[] =
 static void RCC_Configuration(void)
 {
   /* Enable GPIO clock */
-  RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOB | RCC_APB2Periph_USART1 | RCC_APB2Periph_AFIO, ENABLE);
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOB | RCC_APB2Periph_GPIOC | RCC_APB2Periph_USART1 | RCC_APB2Periph_AFIO, ENABLE);
   
-  RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART3 | RCC_APB1Periph_I2C1, ENABLE);
+  RCC_APB1PeriphClockCmd(RCC_APB1Periph_USART2 | RCC_APB1Periph_USART3 | RCC_APB1Periph_I2C1, ENABLE);
 
 }
 
@@ -530,7 +530,18 @@ static void GPIO_Configuration(void)
 {
   GPIO_InitTypeDef GPIO_InitStructure;
   
-  //BC95COM
+  //BC95COM  uart2
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_3;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+  GPIO_Init(GPIOA, &GPIO_InitStructure);
+  
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
+  GPIO_Init(GPIOA, &GPIO_InitStructure);
+  
+  
+  //USERCOM uart3
   GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
   GPIO_Init(GPIOA, &GPIO_InitStructure);
@@ -539,10 +550,9 @@ static void GPIO_Configuration(void)
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
   GPIO_Init(GPIOA, &GPIO_InitStructure);
-  
-  
-    //USERCOM
-  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_11;
+	
+	//rs485 uart1
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_11;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
   GPIO_Init(GPIOB, &GPIO_InitStructure);
   
@@ -558,23 +568,23 @@ static void GPIO_Configuration(void)
   GPIO_Init(GPIOB, &GPIO_InitStructure);
   
   //BC95/RST
-  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_11;
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
   GPIO_Init(GPIOA, &GPIO_InitStructure);
   
   //led_R led_Y
-  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_14 | GPIO_Pin_15;
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13 | GPIO_Pin_14;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
-  GPIO_Init(GPIOB, &GPIO_InitStructure);
+  GPIO_Init(GPIOC, &GPIO_InitStructure);
   
   
   //key
-  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_13;
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_15;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
-  GPIO_Init(GPIOB, &GPIO_InitStructure);
+  GPIO_Init(GPIOC, &GPIO_InitStructure);
   
 }
 
@@ -583,10 +593,10 @@ static void RST_Configuration(void)
   NVIC_InitTypeDef NVIC_InitStructure;
   EXTI_InitTypeDef EXTI_InitStructure;
   
-  GPIO_EXTILineConfig(GPIO_PortSourceGPIOB, GPIO_PinSource13);
+  GPIO_EXTILineConfig(GPIO_PortSourceGPIOC, GPIO_PinSource15);
 
   /* Configure EXTI0 line */
-  EXTI_InitStructure.EXTI_Line = EXTI_Line13;
+  EXTI_InitStructure.EXTI_Line = EXTI_Line15;
   EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
   EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Falling;  
   EXTI_InitStructure.EXTI_LineCmd = ENABLE;
@@ -1048,9 +1058,9 @@ static int config_bc95()
 	usart_configure(BC95COM, BC95ORGBAUDRATE, 1, 0);
 	
 	//reset bc95
-  GPIO_ResetBits(GPIOA, GPIO_Pin_11);
+  GPIO_ResetBits(GPIOA, GPIO_Pin_4);
 	rt_thread_delay(rt_tick_from_millisecond(110));
-  GPIO_SetBits(GPIOA, GPIO_Pin_11);
+  GPIO_SetBits(GPIOA, GPIO_Pin_4);
   
   status = ATCMD_waitOK(ATSTR, 60, 100);
   
@@ -1260,7 +1270,7 @@ static rt_err_t urx_input(rt_device_t dev, rt_size_t size)
 
 static void main_entry(void *args)
 {  
-  BC95COM = usart_init("uart1", BC95ORGBAUDRATE, 1, 0);
+  BC95COM = usart_init("uart2", BC95ORGBAUDRATE, 1, 0);
   USERCOM = usart_init("uart3", l_nbModuConfig.baudrate, l_nbModuConfig.stopbit, l_nbModuConfig.parity);
   
   if(config_bc95() != 0)
@@ -1319,15 +1329,15 @@ static void status_entry(void *args)
 		
 		if(status == DEVICEOK)
 		{
-			GPIO_SetBits(GPIOB, GPIO_Pin_14);
+			GPIO_SetBits(GPIOC, GPIO_Pin_14);
 		}
 		else if(status == BC95DONTWORK)
 		{
 			for(int i=0; i<1; i++)
 			{
-				GPIO_ResetBits(GPIOB, GPIO_Pin_14);
+				GPIO_ResetBits(GPIOC, GPIO_Pin_14);
 				rt_thread_delay(rt_tick_from_millisecond(blinkInter));
-				GPIO_SetBits(GPIOB, GPIO_Pin_14);
+				GPIO_SetBits(GPIOC, GPIO_Pin_14);
 				rt_thread_delay(rt_tick_from_millisecond(blinkInter));
 			}
 		}
@@ -1335,9 +1345,9 @@ static void status_entry(void *args)
 		{
 			for(int i=0; i<2; i++)
 			{
-				GPIO_ResetBits(GPIOB, GPIO_Pin_14);
+				GPIO_ResetBits(GPIOC, GPIO_Pin_14);
 				rt_thread_delay(rt_tick_from_millisecond(blinkInter));
-				GPIO_SetBits(GPIOB, GPIO_Pin_14);
+				GPIO_SetBits(GPIOC, GPIO_Pin_14);
 				rt_thread_delay(rt_tick_from_millisecond(blinkInter));
 			}
 		}
@@ -1345,9 +1355,9 @@ static void status_entry(void *args)
 		{
 			for(int i=0; i<3; i++)
 			{
-				GPIO_ResetBits(GPIOB, GPIO_Pin_14);
+				GPIO_ResetBits(GPIOC, GPIO_Pin_14);
 				rt_thread_delay(rt_tick_from_millisecond(blinkInter));
-				GPIO_SetBits(GPIOB, GPIO_Pin_14);
+				GPIO_SetBits(GPIOC, GPIO_Pin_14);
 				rt_thread_delay(rt_tick_from_millisecond(blinkInter));
 			}
 		}
@@ -1369,7 +1379,7 @@ static void key_entry(void *args)
 		{
 			uint64_t uTouchDownTime = get_timestamp();
 			uint64_t uHoldTime = 0;
-			while(GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_13) == Bit_RESET)
+			while(GPIO_ReadInputDataBit(GPIOC, GPIO_Pin_15) == Bit_RESET)
 			{
 				rt_thread_delay(rt_tick_from_millisecond(50));
 			}
@@ -1421,9 +1431,9 @@ static void midLight_entry(void *args)
 		{
 			for(int i=0; i<la.blink_times; i++)
 			{
-				GPIO_ResetBits(GPIOB, GPIO_Pin_15);
+				GPIO_ResetBits(GPIOC, GPIO_Pin_13);
 				rt_thread_delay(rt_tick_from_millisecond(la.interval_time));
-				GPIO_SetBits(GPIOB, GPIO_Pin_15);
+				GPIO_SetBits(GPIOC, GPIO_Pin_13);
 				rt_thread_delay(rt_tick_from_millisecond(la.interval_time));
 			}
 			rt_thread_delay(rt_tick_from_millisecond(la.stop_time));
@@ -1436,8 +1446,8 @@ int main(void)
 	RCC_Configuration();
   GPIO_Configuration();
 	//led light off
-  GPIO_SetBits(GPIOB, GPIO_Pin_14);
-  GPIO_SetBits(GPIOB, GPIO_Pin_15);
+  GPIO_SetBits(GPIOC, GPIO_Pin_13);
+  GPIO_SetBits(GPIOC, GPIO_Pin_14);
   NVIC_PriorityGroupConfig(NVIC_PriorityGroup_3);
   tick_ms_init();
   config_init();
@@ -1475,11 +1485,11 @@ void EXTI15_10_IRQHandler(void)
 {    
 	rt_interrupt_enter();
 
-  if(EXTI_GetITStatus(EXTI_Line13) != RESET)
+  if(EXTI_GetITStatus(EXTI_Line15) != RESET)
   {
     rt_sem_release(l_sem_key);
 
-    EXTI_ClearITPendingBit(EXTI_Line13);
+    EXTI_ClearITPendingBit(EXTI_Line15);
   }
 	
 	rt_interrupt_leave();

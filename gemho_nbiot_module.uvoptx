@@ -154,7 +154,7 @@
           <Type>0</Type>
           <LineNumber>342</LineNumber>
           <EnabledFlag>1</EnabledFlag>
-          <Address>134239396</Address>
+          <Address>134239572</Address>
           <ByteObject>0</ByteObject>
           <HtxType>0</HtxType>
           <ManyObjects>0</ManyObjects>
@@ -164,6 +164,22 @@
           <Filename>d:\Keil_v5\ARM\PACK\rt-thread\rtthread\3.0.3\libcpu\arm\cortex-m3\cpuport.c</Filename>
           <ExecCommand></ExecCommand>
           <Expression>\\gemho_nbiot_module\d:/Keil_v5/ARM/PACK/rt-thread/rtthread/3.0.3/libcpu/arm/cortex-m3/cpuport.c\342</Expression>
+        </Bp>
+        <Bp>
+          <Number>1</Number>
+          <Type>0</Type>
+          <LineNumber>142</LineNumber>
+          <EnabledFlag>1</EnabledFlag>
+          <Address>0</Address>
+          <ByteObject>0</ByteObject>
+          <HtxType>0</HtxType>
+          <ManyObjects>0</ManyObjects>
+          <SizeOfObject>0</SizeOfObject>
+          <BreakByAccess>0</BreakByAccess>
+          <BreakIfRCount>0</BreakIfRCount>
+          <Filename>RTE\Device\STM32F103C8\startup_stm32f10x_md.s</Filename>
+          <ExecCommand></ExecCommand>
+          <Expression></Expression>
         </Bp>
       </Breakpoint>
       <WatchWindow1>
