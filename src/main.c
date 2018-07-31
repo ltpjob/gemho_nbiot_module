@@ -13,8 +13,10 @@
 
 static void *USERCOM = NULL;
 static void *BC95COM = NULL;
+static void *USERCOM485 = NULL;
 static void *l_hMsgFifo = NULL;
 static rt_sem_t l_sem_urx = RT_NULL;
+static rt_sem_t l_sem_urx485 = RT_NULL;
 static rt_sem_t l_sem_key = RT_NULL;
 static rt_mq_t  l_mq_midLight = RT_NULL;
 static DeviceStatus l_devStatus = DEVICEOK;
@@ -38,6 +40,14 @@ static nbModu_config l_nbModuConfig;
 static char l_IMEI[15] = "";
 static int l_nband = 0;
 
+static int UCALL_write(const void *d, size_t len)
+{
+	usart_write(USERCOM, d, len);
+	usart_write(USERCOM485, d, len);
+	
+	return len;
+}
+
 //IMSIÂë
 static int ATCIMI_cmd(char *cmd, int len)
 {
@@ -46,7 +56,7 @@ static int ATCIMI_cmd(char *cmd, int len)
   
   if(len > sizeof(buf)-1)
   {
-    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+    UCALL_write(ERRORSTR, strlen(ERRORSTR));
     return 0;
   }
 	
@@ -57,11 +67,11 @@ static int ATCIMI_cmd(char *cmd, int len)
     snprintf(buf, sizeof(buf), "%s\r\n", ATCIMI);
 		usart_write(BC95COM, buf, strlen(buf));
 		size = usart_read(BC95COM, buf, sizeof(buf), 30);
-    usart_write(USERCOM, buf, size);
+    UCALL_write(buf, size);
   }
   else
   {
-    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+    UCALL_write(ERRORSTR, strlen(ERRORSTR));
   }
 	
 	return 0;
@@ -75,7 +85,7 @@ static int ATCSQ_cmd(char *cmd, int len)
   
   if(len > sizeof(buf)-1)
   {
-    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+    UCALL_write(ERRORSTR, strlen(ERRORSTR));
     return 0;
   }
 	
@@ -86,11 +96,11 @@ static int ATCSQ_cmd(char *cmd, int len)
     snprintf(buf, sizeof(buf), "%s\r\n", ATCSQ);
 		usart_write(BC95COM, buf, strlen(buf));
 		size = usart_read(BC95COM, buf, sizeof(buf), 30);
-    usart_write(USERCOM, buf, size);
+    UCALL_write(buf, size);
   }
   else
   {
-    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+    UCALL_write(ERRORSTR, strlen(ERRORSTR));
   }
 	
 	return 0;
@@ -104,7 +114,7 @@ static int ATNUESTATS_cmd(char *cmd, int len)
   
   if(len > sizeof(buf)-1)
   {
-    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+    UCALL_write(ERRORSTR, strlen(ERRORSTR));
     return 0;
   }
 	
@@ -115,11 +125,11 @@ static int ATNUESTATS_cmd(char *cmd, int len)
     snprintf(buf, sizeof(buf), "%s\r\n", ATNUESTATS);
 		usart_write(BC95COM, buf, strlen(buf));
 		size = usart_read(BC95COM, buf, sizeof(buf), 30);
-    usart_write(USERCOM, buf, size);
+    UCALL_write(buf, size);
   }
   else
   {
-    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+    UCALL_write(ERRORSTR, strlen(ERRORSTR));
   }
 	
 	return 0;
@@ -133,7 +143,7 @@ static int ATCGATT_cmd(char *cmd, int len)
   
   if(len > sizeof(buf)-1)
   {
-    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+    UCALL_write(ERRORSTR, strlen(ERRORSTR));
     return 0;
   }
 	
@@ -144,11 +154,11 @@ static int ATCGATT_cmd(char *cmd, int len)
     snprintf(buf, sizeof(buf), "%s?\r\n", ATCGATT);
 		usart_write(BC95COM, buf, strlen(buf));
 		size = usart_read(BC95COM, buf, sizeof(buf), 30);
-    usart_write(USERCOM, buf, size);
+    UCALL_write(buf, size);
   }
   else
   {
-    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+    UCALL_write(ERRORSTR, strlen(ERRORSTR));
   }
 	
 	return 0;
@@ -161,7 +171,7 @@ static int ATVER_cmd(char *cmd, int len)
   
   if(len > sizeof(buf)-1)
   {
-    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+    UCALL_write(ERRORSTR, strlen(ERRORSTR));
     return 0;
   }
 	
@@ -170,11 +180,11 @@ static int ATVER_cmd(char *cmd, int len)
 	if(strcmp(buf, ATVER) == 0)
   {
     snprintf(buf, sizeof(buf), "+VER:%s\r\n", VERSION);
-    usart_write(USERCOM, buf, strlen(buf));
+    UCALL_write(buf, strlen(buf));
   }
   else
   {
-    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+    UCALL_write(ERRORSTR, strlen(ERRORSTR));
   }
 	
 	return 0;
@@ -190,7 +200,7 @@ static int ATRS232_cmd(char *cmd, int len)
   
   if(len > sizeof(buf)-1)
   {
-    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+    UCALL_write(ERRORSTR, strlen(ERRORSTR));
     return 0;
   }
   
@@ -200,7 +210,7 @@ static int ATRS232_cmd(char *cmd, int len)
   {
     snprintf(buf, sizeof(buf), "+RS232:%d,%d,%d\r\n", 
              l_nbModuConfig.baudrate, l_nbModuConfig.stopbit, l_nbModuConfig.parity);
-    usart_write(USERCOM, buf, strlen(buf));
+    UCALL_write(buf, strlen(buf));
   }
   else if(memcmp(buf, ATRS232EQ, strlen(ATRS232EQ)) == 0)
   {
@@ -210,16 +220,16 @@ static int ATRS232_cmd(char *cmd, int len)
       l_nbModuConfig.stopbit = stopbit;
       l_nbModuConfig.parity = parity;
       
-      usart_write(USERCOM, OKSTR, strlen(OKSTR));
+      UCALL_write(OKSTR, strlen(OKSTR));
     }
     else
     {
-      usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+      UCALL_write(ERRORSTR, strlen(ERRORSTR));
     }
   }
   else
   {
-    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+    UCALL_write(ERRORSTR, strlen(ERRORSTR));
   }
   
   return 0;
@@ -232,7 +242,7 @@ static int ATIPPORT_cmd(char *cmd, int len)
   
   if(len > sizeof(buf)-1)
   {
-    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+    UCALL_write(ERRORSTR, strlen(ERRORSTR));
     return 0;
   }
   
@@ -243,7 +253,7 @@ static int ATIPPORT_cmd(char *cmd, int len)
     snprintf(buf, sizeof(buf), "+IPPORT:%d.%d.%d.%d,%d\r\n", 
              l_nbModuConfig.ip[0], l_nbModuConfig.ip[1], l_nbModuConfig.ip[2], 
              l_nbModuConfig.ip[3], l_nbModuConfig.port);
-    usart_write(USERCOM, buf, strlen(buf));
+    UCALL_write(buf, strlen(buf));
   }
   else if(memcmp(buf, ATIPPORTEQ, strlen(ATIPPORTEQ)) == 0)
   {
@@ -259,16 +269,16 @@ static int ATIPPORT_cmd(char *cmd, int len)
       
       l_nbModuConfig.port = port;
       
-      usart_write(USERCOM, OKSTR, strlen(OKSTR));
+      UCALL_write(OKSTR, strlen(OKSTR));
     }
     else
     {
-      usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+      UCALL_write(ERRORSTR, strlen(ERRORSTR));
     }
   }
   else
   {
-    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+    UCALL_write(ERRORSTR, strlen(ERRORSTR));
   }
   
   return 0;
@@ -282,7 +292,7 @@ static int ATIMEIBD_cmd(char *cmd, int len)
   
   if(len > sizeof(buf)-1)
   {
-    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+    UCALL_write(ERRORSTR, strlen(ERRORSTR));
     return 0;
   }
   
@@ -292,11 +302,11 @@ static int ATIMEIBD_cmd(char *cmd, int len)
   {
     memcpy(IMEI, l_IMEI, sizeof(l_IMEI));
     snprintf(buf, sizeof(buf), "+IMEIBD:%s,%d\r\n", IMEI, l_nband);
-    usart_write(USERCOM, buf, strlen(buf));
+    UCALL_write(buf, strlen(buf));
   }
   else
   {
-    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+    UCALL_write(ERRORSTR, strlen(ERRORSTR));
   }
   
   return 0;
@@ -308,7 +318,7 @@ static int ATMSGS_cmd(char *cmd, int len)
   
   if(len > sizeof(buf)-1)
   {
-    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+    UCALL_write(ERRORSTR, strlen(ERRORSTR));
     return 0;
   }
   
@@ -318,7 +328,7 @@ static int ATMSGS_cmd(char *cmd, int len)
   {
     snprintf(buf, sizeof(buf), "+MSGS:%d\r\n", 
              l_nbModuConfig.msgSave);
-    usart_write(USERCOM, buf, strlen(buf));
+    UCALL_write(buf, strlen(buf));
   }
   else if(memcmp(buf, ATMSGSEQ, strlen(ATMSGSEQ)) == 0)
   {
@@ -328,22 +338,22 @@ static int ATMSGS_cmd(char *cmd, int len)
     {
       if(msgSave <1 || msgSave>5)
       {
-        usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+        UCALL_write(ERRORSTR, strlen(ERRORSTR));
       }
       else
       {
         l_nbModuConfig.msgSave = msgSave;
-        usart_write(USERCOM, OKSTR, strlen(OKSTR));
+        UCALL_write(OKSTR, strlen(OKSTR));
       }
     }
     else
     {
-      usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+      UCALL_write(ERRORSTR, strlen(ERRORSTR));
     }
   }
   else
   {
-    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+    UCALL_write(ERRORSTR, strlen(ERRORSTR));
   }
   
   return 0;
@@ -356,7 +366,7 @@ static int ATSEMO_cmd(char *cmd, int len)
   
   if(len > sizeof(buf)-1)
   {
-    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+    UCALL_write(ERRORSTR, strlen(ERRORSTR));
     return 0;
   }
   
@@ -366,7 +376,7 @@ static int ATSEMO_cmd(char *cmd, int len)
   {
     snprintf(buf, sizeof(buf), "+SEMO:%d\r\n", 
              l_nbModuConfig.sendMode);
-    usart_write(USERCOM, buf, strlen(buf));
+    UCALL_write(buf, strlen(buf));
   }
   else if(memcmp(buf, ATSEMOEQ, strlen(ATSEMOEQ)) == 0)
   {
@@ -376,22 +386,22 @@ static int ATSEMO_cmd(char *cmd, int len)
     {
       if(sendMode <0 || sendMode>1)
       {
-        usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+        UCALL_write(ERRORSTR, strlen(ERRORSTR));
       }
       else
       {
         l_nbModuConfig.sendMode = sendMode;
-        usart_write(USERCOM, OKSTR, strlen(OKSTR));
+        UCALL_write(OKSTR, strlen(OKSTR));
       }
     }
     else
     {
-      usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+      UCALL_write(ERRORSTR, strlen(ERRORSTR));
     }
   }
   else
   {
-    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+    UCALL_write(ERRORSTR, strlen(ERRORSTR));
   }
   
   return 0;
@@ -404,7 +414,7 @@ static int ATWDT_cmd(char *cmd, int len)
   
   if(len > sizeof(buf)-1)
   {
-    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+    UCALL_write(ERRORSTR, strlen(ERRORSTR));
     return 0;
   }
   
@@ -414,7 +424,7 @@ static int ATWDT_cmd(char *cmd, int len)
   {
     snprintf(buf, sizeof(buf), "+WDT:%d\r\n", 
              l_nbModuConfig.watchdog);
-    usart_write(USERCOM, buf, strlen(buf));
+    UCALL_write(buf, strlen(buf));
   }
   else if(memcmp(buf, ATWDTEQ, strlen(ATWDTEQ)) == 0)
   {
@@ -424,22 +434,22 @@ static int ATWDT_cmd(char *cmd, int len)
     {
       if(watchdog <0 || watchdog>1)
       {
-        usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+        UCALL_write(ERRORSTR, strlen(ERRORSTR));
       }
       else
       {
         l_nbModuConfig.watchdog = watchdog;
-        usart_write(USERCOM, OKSTR, strlen(OKSTR));
+        UCALL_write(OKSTR, strlen(OKSTR));
       }
     }
     else
     {
-      usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+      UCALL_write(ERRORSTR, strlen(ERRORSTR));
     }
   }
   else
   {
-    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+    UCALL_write(ERRORSTR, strlen(ERRORSTR));
   }
   
   return 0;
@@ -459,11 +469,11 @@ static int ATSAVE_cmd(char *cmd, int len)
   
   if(ret == 0)
   {
-    usart_write(USERCOM, OKSTR, strlen(OKSTR));
+    UCALL_write(OKSTR, strlen(OKSTR));
   }
   else
   {
-    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+    UCALL_write(ERRORSTR, strlen(ERRORSTR));
   }
   
   return ret;
@@ -486,11 +496,11 @@ static int ATDELO_cmd(char *cmd, int len)
   
   if(ret == 0)
   {
-    usart_write(USERCOM, OKSTR, strlen(OKSTR));
+    UCALL_write(OKSTR, strlen(OKSTR));
   }
   else
   {
-    usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+    UCALL_write(ERRORSTR, strlen(ERRORSTR));
   }
   
   return ret;
@@ -559,6 +569,12 @@ static void GPIO_Configuration(void)
   GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
+  GPIO_Init(GPIOB, &GPIO_InitStructure);
+	
+	//485rd
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_1;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
   GPIO_Init(GPIOB, &GPIO_InitStructure);
   
     //i2c1
@@ -653,10 +669,16 @@ static void USERCOM_direct_BC95COM()
 			usart_write(BC95COM, buf, ret);
 		}
 		
+		ret = usart_read(USERCOM485, buf, sizeof(buf), 0);
+		if(ret > 0)
+		{
+			usart_write(BC95COM, buf, ret);
+		}
+		
 		ret = usart_read(BC95COM, buf, sizeof(buf), 0);
 		if(ret > 0)
 		{
-			usart_write(USERCOM, buf, ret);
+			UCALL_write(buf, ret);
 		}
   }
 }
@@ -806,17 +828,18 @@ static ModeToRun start_mode()
   do
   {
     len = usart_read(USERCOM, buf, sizeof(buf), 100);
+		len += usart_read(USERCOM485, buf+len, sizeof(buf)-len, 100);
   }while(len == 0);
   
   if(memmem(buf, len, ATDEBUG, strlen(ATDEBUG)) != NULL)
   {
     mode = atDebug;
-    usart_write(USERCOM, ATDEBUG, strlen(ATDEBUG));
+    UCALL_write(ATDEBUG, strlen(ATDEBUG));
   }
   else if(memmem(buf, len, GEMHOCFG, strlen(GEMHOCFG)) != NULL)
   {
     mode = gemhoConfig;
-    usart_write(USERCOM, GEMHOCFG, strlen(GEMHOCFG));
+		UCALL_write(GEMHOCFG, strlen(GEMHOCFG));
   }
   else
   {
@@ -840,7 +863,11 @@ void ghConfig()
   
   while(1)
   {
+		cnt = 0;
     len = usart_read(USERCOM, buf+cnt, sizeof(buf)-cnt, 10);
+    cnt += len;
+		
+		len = usart_read(USERCOM485, buf+cnt, sizeof(buf)-cnt, 10);
     cnt += len;
     
     if(cnt == 0)
@@ -859,7 +886,8 @@ void ghConfig()
         }
         else if(sizeof(cmdExe)/sizeof(cmdExe[0]) <= i+1) //Î´¶¨ÒåÃüÁî
         {
-          usart_write(USERCOM, UDCMD, strlen(UDCMD));
+					cnt = 0;
+          UCALL_write(UDCMD, strlen(UDCMD));
         }
       }
       
@@ -871,7 +899,7 @@ void ghConfig()
     {
       memset(buf, 0, sizeof(buf));
       cnt = 0;
-      usart_write(USERCOM, ERRORSTR, strlen(ERRORSTR));
+      UCALL_write(ERRORSTR, strlen(ERRORSTR));
     }
     
   }
@@ -1078,7 +1106,7 @@ static int config_bc95()
       snprintf(buf, sizeof(buf), "AT+NSOCR=DGRAM,17,8888,1\r\n");
       if(ATCMD_waitOK(buf, 3, 100) != 0)
       {
-        usart_write(USERCOM, "UDP CONFIG FAIL\r\n", strlen("UDP CONFIG FAIL\r\n"));
+        UCALL_write("UDP CONFIG FAIL\r\n", strlen("UDP CONFIG FAIL\r\n"));
         status = -2;
       }
     }
@@ -1089,19 +1117,19 @@ static int config_bc95()
                l_nbModuConfig.ip[3], l_nbModuConfig.port);
       if(ATCMD_waitOK(buf, 3, 100) != 0)
       {
-        usart_write(USERCOM, "COAP CONFIG FAIL\r\n", strlen("COAP CONFIG FAIL\r\n"));
+        UCALL_write("COAP CONFIG FAIL\r\n", strlen("COAP CONFIG FAIL\r\n"));
         status = -3;
       }
     }
   }
   else
   {
-    usart_write(USERCOM, "INIT FAIL\r\n", strlen("INIT FAIL\r\n"));
+    UCALL_write("INIT FAIL\r\n", strlen("INIT FAIL\r\n"));
   }
   
   if(status == 0)
   {
-//    usart_write(USERCOM, "INIT OK\r\n", strlen("INIT OK\r\n"));
+//    UCALL_write("INIT OK\r\n", strlen("INIT OK\r\n"));
 
   }
 
@@ -1267,18 +1295,34 @@ static rt_err_t urx_input(rt_device_t dev, rt_size_t size)
 	return RT_EOK;
 } 
 
+static rt_err_t urx485_input(rt_device_t dev, rt_size_t size)
+{
+	
+	rt_sem_release(l_sem_urx485);
+	
+	return RT_EOK;
+} 
+
 
 static void main_entry(void *args)
 {  
+	uart_rs485 rs485_cfg;
+	
   BC95COM = usart_init("uart2", BC95ORGBAUDRATE, 1, 0, NULL);
   USERCOM = usart_init("uart3", l_nbModuConfig.baudrate, l_nbModuConfig.stopbit, l_nbModuConfig.parity, NULL);
+	
+	rs485_cfg.GPIOx = GPIOB;
+	rs485_cfg.GPIO_Pin = GPIO_Pin_1;
+	USERCOM485 = usart_init("uart1", l_nbModuConfig.baudrate, l_nbModuConfig.stopbit, l_nbModuConfig.parity, &rs485_cfg);
   
   if(config_bc95() != 0)
 	{
 		setDevicStatus(BC95DONTWORK);
 	}
-	
-	midLight_action(2000, 1, 200, 1);
+	else
+	{
+		midLight_action(2000, 1, 200, 1);
+	}
 	
 	l_hMsgFifo = msg_init(MSG_MAXLEN, l_nbModuConfig.msgSave);
 	
@@ -1300,16 +1344,30 @@ static void main_entry(void *args)
 
 	
 	l_sem_urx = rt_sem_create("l_sem_urx", 0, RT_IPC_FLAG_PRIO);
-	rt_device_set_rx_indicate(USERCOM, urx_input);
+	usart_set_rx_indicate(USERCOM, urx_input);
+	
+	l_sem_urx485 = rt_sem_create("l_sem_urx485", 0, RT_IPC_FLAG_PRIO);
+	usart_set_rx_indicate(USERCOM485, urx485_input);
 	
 	while(1)
 	{
-		if(rt_sem_take(l_sem_urx, rt_tick_from_millisecond(200)) == RT_EOK)
+		if(rt_sem_take(l_sem_urx, rt_tick_from_millisecond(5)) == RT_EOK)
 		{
 			int len;
 			char buf[512] = "";
 			
 			len = usart_read(USERCOM, buf, sizeof(buf), 100);
+			if(len > 0)
+			{
+				msg_push(l_hMsgFifo, buf, len);
+				midLight_action(50, 2, 500, 0);
+			}
+		}else if(rt_sem_take(l_sem_urx485, rt_tick_from_millisecond(5)) == RT_EOK)
+		{
+			int len;
+			char buf[512] = "";
+			
+			len = usart_read(USERCOM485, buf, sizeof(buf), 100);
 			if(len > 0)
 			{
 				msg_push(l_hMsgFifo, buf, len);
@@ -1482,7 +1540,7 @@ int main(void)
 
 
 void EXTI15_10_IRQHandler(void)
-{    
+{   
 	rt_interrupt_enter();
 
   if(EXTI_GetITStatus(EXTI_Line15) != RESET)

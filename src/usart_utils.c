@@ -1,6 +1,6 @@
 #include "time_utils.h"
 #include "usart_utils.h"
-#include <rtdevice.h>
+
 
 typedef struct tag_uart_handle
 {
@@ -190,5 +190,17 @@ int usart_read(void* USARTx, void *d, size_t len, int timeout)
   return cnt;
 }
 
-
+rt_err_t
+usart_set_rx_indicate(void* USARTx,
+                          rt_err_t (*rx_ind)(rt_device_t dev, rt_size_t size))
+{
+	if(USARTx == NULL)
+	return -1;
+	
+	uart_handle *handle = USARTx;
+	rt_device_t hDev = handle->hDev;
+	
+	return rt_device_set_rx_indicate(hDev, rx_ind);
+	
+}
 
