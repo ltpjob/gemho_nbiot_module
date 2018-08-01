@@ -106,7 +106,7 @@ typedef struct tag_cmdExcute
 #define UDCMD "UNDEFINED CMD\r\n"
 #define KPMFT "key push message for test"
 
-#define VERSION "1.0.203fe54.1"
+#define VERSION "1.0.6a84ddb.1"
    
 #ifdef __cplusplus
  }
