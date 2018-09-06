@@ -23,7 +23,7 @@ static DeviceStatus l_devStatus = DEVICEOK;
 
 static const nbModu_config l_default_nbMCFG = 
 {
-  .ip = {180, 101, 147, 115},
+  .ip = {117, 60, 157, 137},
   .port = 5683,
   .sendMode = 0,
   .baudrate = 115200,
@@ -972,7 +972,7 @@ static int get_NBAND(int *pNand)
 			pStart = memmem(buf, sizeof(buf), NBANDRTN, strlen(NBANDRTN));
 			pEnd = memmem(buf, sizeof(buf), ENDOK, strlen(ENDOK));
 			
-			if(pStart != NULL && pEnd != NULL && pEnd-pStart-strlen(NBANDRTN)==1)
+			if(pStart != NULL && pEnd != NULL && pEnd-pStart-strlen(NBANDRTN)<=3)
 			{
 				*pNand = (pStart+strlen(NBANDRTN))[0]-'0';
 				ret = 0;
@@ -1261,6 +1261,8 @@ static void thread_msgSend(void *args)
 						{
 //							rt_thread_delay(rt_tick_from_millisecond(failTimes*1000));
 							//每次尝试附着失败后休眠，2的n次方分钟，n为失败次数
+							if(failTimes >= 7)
+								failTimes = 7;
 							rt_thread_delay(rt_tick_from_millisecond(pow(2,failTimes)*60*1000));
 						}
 					}
